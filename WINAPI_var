@@ -1,0 +1,230 @@
+#include <windows.h>
+#include <vector>
+#include <cmath>
+#include <string>
+
+#define pi 3.14159265f
+#define NUM_POINTS 100
+
+// Глобальные переменные
+std::vector<std::pair<float, float>> points1;
+std::vector<std::pair<float, float>> points2;
+float n[3] = { 1.0f, 0.0f, -1.0f };
+bool isDragging = false;
+POINT lastMousePos;
+
+// Функция проекции эллипса
+void ProjectEllipse(float* c, float* u, float* v, float* n, int N, float norm, std::vector<std::pair<float, float>>& points) {
+    points.clear();
+    points.resize(N);
+    float** r3 = new float* [N];
+    float** r2 = new float* [N];
+    for (int i = 0; i < N; i++) {
+        r3[i] = new float[3];
+        r2[i] = new float[2];
+    }
+    for (int i = 0; i < N; i++) {
+        float t = 2 * pi * i / (N - 1);
+        float a1[3]; //a1=c-(c*n)*n
+        float a2[3]; //a2=u-(u*n)*n
+        float a3[3]; //a3=v-(v*n)*n
+        for (int j = 0; j < 3; j++) {
+            a1[j] = c[j] - (c[0] * n[0] + c[1] * n[1] + c[2] * n[2]) * n[j];
+            a2[j] = u[j] - (u[0] * n[0] + u[1] * n[1] + u[2] * n[2]) * n[j];
+            a3[j] = v[j] - (v[0] * n[0] + v[1] * n[1] + v[2] * n[2]) * n[j];
+            r3[i][j] = a1[j] + a2[j] * std::cos(t) + a3[j] * std::sin(t);
+        }
+        if (n[0] != 0 || n[1] != 0) {
+            r2[i][0] = (n[1] * r3[i][0] - n[0] * r3[i][1]) / norm;
+            r2[i][1] = r3[i][0] * n[0] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) + r3[i][1] * n[1] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) - r3[i][2] * std::sqrt(n[0] * n[0] + n[1] * n[1]);
+        }
+        else {
+            r2[i][0] = r3[i][0];
+            r2[i][1] = r3[i][1] * -1;
+        }
+
+        r2[i][0] += 15;
+        r2[i][0] *= 50;
+        r2[i][1] += 10;
+        r2[i][1] *= 50;
+        //lines[i].position = sf::Vector2f(r2[i][0], r2[i][1]);
+        points[i].first = r2[i][0];
+        points[i].second = r2[i][1];
+    }
+    for (int i = 0; i < N; i++) {
+        delete[] r3[i];
+        delete[] r2[i];
+    }
+    delete[] r3;
+    delete[] r2;
+}
+
+// Функция обработки сообщений
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+
+        // Очистка экрана
+        RECT clientRect;
+        GetClientRect(hWnd, &clientRect);
+        FillRect(hdc, &clientRect, (HBRUSH)(COLOR_WINDOW + 1));
+
+        // Рисование первого эллипса (красный)
+        HPEN hRedPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+        HPEN hOldPen = (HPEN)SelectObject(hdc, hRedPen);
+
+        MoveToEx(hdc, (int)points1[0].first, (int)points1[0].second, NULL);
+        for (size_t i = 1; i < points1.size(); i++) {
+            LineTo(hdc, (int)points1[i].first, (int)points1[i].second);
+            }
+        LineTo(hdc, (int)points1[0].first, (int)points1[0].second);
+
+        MoveToEx(hdc, (int)points2[0].first, (int)points2[0].second, NULL);
+        for (size_t i = 1; i < points2.size(); i++) {
+            LineTo(hdc, (int)points2[i].first, (int)points2[i].second);
+        }
+        LineTo(hdc, (int)points2[0].first, (int)points2[0].second);
+
+        // Восстанавливаем оригинальное перо
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hRedPen);
+
+        EndPaint(hWnd, &ps);
+        break;
+    }
+    case WM_ENTERSIZEMOVE:
+        isDragging = true; // Блокируем пересчёт при перемещении окна
+        break;
+    case WM_LBUTTONDOWN: {
+        isDragging = true;
+        lastMousePos.x = LOWORD(lParam);
+        lastMousePos.y = HIWORD(lParam);
+        SetCapture(hWnd);
+        break;
+    }
+    case WM_MOUSEMOVE: {
+        if (isDragging) {
+            POINT currentMousePos;
+            currentMousePos.x = LOWORD(lParam);
+            currentMousePos.y = HIWORD(lParam);
+
+            // Вычисляем изменение углов
+            float dx = lastMousePos.x - currentMousePos.x;
+            float dy = lastMousePos.y - currentMousePos.y;
+
+            // Обновляем нормальный вектор
+            float theta = acosf(n[2]);
+            float phi = atan2f(n[1], n[0]);
+
+            theta -= 0.01f * dy;
+            phi += 0.01f * dx;
+
+            n[0] = sinf(theta) * cosf(phi);
+            n[1] = sinf(theta) * sinf(phi);
+            n[2] = cosf(theta);
+
+            // Нормализуем вектор
+            float norm = sqrtf(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+            n[0] /= norm;
+            n[1] /= norm;
+            n[2] /= norm;
+
+            // Пересчитываем проекции
+            float c1[3] = { 0, 0, 0 };
+            float u1[3] = { 5, 0, 0 };
+            float v1[3] = { 0, 5, 0 };
+            float c2[3] = { 1, 0, 0 };
+            float u2[3] = { 0, 3, 0 };
+            float v2[3] = { 0, 0, 4 };
+            float norm2D = sqrtf(n[0] * n[0] + n[1] * n[1]);
+
+            ProjectEllipse(c1, u1, v1, n, NUM_POINTS, norm2D, points1);
+            ProjectEllipse(c2, u2, v2, n, NUM_POINTS, norm2D, points2);
+
+            // Перерисовываем окно
+            InvalidateRect(hWnd, NULL, TRUE);
+
+            lastMousePos = currentMousePos;
+        }
+        break;
+    }
+
+    case WM_LBUTTONUP: {
+        isDragging = false;
+        ReleaseCapture();
+        break;
+    }
+
+    case WM_KEYDOWN: {
+        if (wParam == VK_ESCAPE) {
+            PostQuitMessage(0);
+        }
+        break;
+    }
+
+    case WM_DESTROY: {
+        PostQuitMessage(0);
+        break;
+    }
+
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+
+// Точка входа
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // Инициализация данных
+    float c1[3] = { 0, 0, 0 };
+    float u1[3] = { 5, 0, 0 };
+    float v1[3] = { 0, 5, 0 };
+    float c2[3] = { 1, 0, 0 };
+    float u2[3] = { 0, 3, 0 };
+    float v2[3] = { 0, 0, 4 };
+    float norm = sqrtf(n[0] * n[0] + n[1] * n[1]);
+
+    ProjectEllipse(c1, u1, v1, n, NUM_POINTS, norm, points1);
+    ProjectEllipse(c2, u2, v2, n, NUM_POINTS, norm, points2);
+
+    // Регистрация класса окна
+    WNDCLASS wc = { 0 };
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = L"SputnikTracker";
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+
+    if (!RegisterClass(&wc)) {
+        MessageBox(NULL, L"Ошибка регистрации класса окна!", L"Ошибка", MB_ICONERROR);
+        return 1;
+    }
+
+    // Создание окна
+    HWND hWnd = CreateWindow(
+        L"SputnikTracker", L"SPUTNIK Tracker",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        800, 600,
+        NULL, NULL, hInstance, NULL
+    );
+
+    if (!hWnd) {
+        MessageBox(NULL, L"Ошибка создания окна!", L"Ошибка", MB_ICONERROR);
+        return 1;
+    }
+
+    // Полноэкранный режим
+    ShowWindow(hWnd, SW_MAXIMIZE);
+
+    // Цикл сообщений
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return (int)msg.wParam;
+}
