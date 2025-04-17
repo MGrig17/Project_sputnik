@@ -19,19 +19,22 @@ using namespace std;
 
 #define pi 3.14159265f
 #define NUM_POINTS 100
+#define R_earth 6400 //радиус Земли в км
 
 // Глобальные переменные
 std::vector<POINT> points1;
 std::vector<POINT> points2;
+POINTS* earth = new POINTS[360];
 float n[3] = { 1.0f, 0.0f, -1.0f };
 bool isDragging = false;
 bool ytro_bobroe = false;
 POINT lastMousePos;
 //координаты центра окна
-float k_zoom = 0.04;
+float k_zoom = 0.04; //масштабный коэффициент, число пикселей на км
+const float dk_zoom = 0.00005; //изменение масштабного коэффициента при прокрутке колёсика мыши на 1 у. е.
 LONG x_c = 600;
 LONG y_c = 300;
-LONG R_e = 6400 * k_zoom;
+LONG R_e = R_earth * k_zoom; //радиус Земли в пикселях
 
 class PointsCloud {
 public:
@@ -113,13 +116,26 @@ public:
         }
     }
 
-    /*
-     * @brief Updates 'mask' array based on the given Earth shape
-     * @param R_e - Earth radius (in pixels)
-     * @param n - nomera vector of camera plane
-     */
-    /*void update_mask(const long& R_e, const float* n) {
-    }*/
+    int draw(HDC hdc, int red, int green, int blue) {
+        if(N != 0) {
+            HPEN hPen = CreatePen(PS_SOLID, 2, RGB(red, green, blue));
+            HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+            MoveToEx(hdc, (int)points[0].x, (int)points[0].y, NULL);
+            for (size_t i = 1; i < N; i++) {
+                if(mask[i])
+                    LineTo(hdc, (int)points[i].x, (int)points[i].y);
+                else
+                    MoveToEx(hdc, (int)points[i].x, (int)points[i].y, NULL);
+            }
+            if(mask[0])
+                LineTo(hdc, (int)points[0].x, (int)points[0].y);
+            return 0;
+        }
+        else {
+            cerr << "RUNTIME EXCEPTION: attempted to draw a null-PointsCloud" << endl;
+            return -1;
+        }
+    }
 
     void set_r3(float**& r3_, const int& N_) {
         N = N_;
@@ -145,13 +161,31 @@ public:
     int get_length() {
         return N;
     }
+
+private:
     POINT* points; //точки для отрисовки проекции в графическом виджете
     bool* mask; //маска массива point: true - точка видна, false - точка закрыта Землёй
-private:
     float** r3;
     int N;
 };
-PointsCloud pc1 = PointsCloud();
+
+class Orbit: public PointsCloud {
+public:
+    Orbit(): PointsCloud() {
+
+    }
+    Orbit(int N_): PointsCloud(N_) {
+
+    }
+};
+
+class Graph3D {
+public:
+    vector<Orbit> satellites;
+    POINTS* earth;
+
+};
+Orbit pc1 = Orbit();
 
 // Функция проекции эллипса
 void ProjectEllipse(float* c, float* u, float* v, float* n, int N, float norm, std::vector<POINT>& points) {
@@ -213,6 +247,7 @@ void ResizeWindowTo90Percent(HWND hWnd) {
         SWP_NOZORDER | SWP_FRAMECHANGED
     );
 }
+
 // ААААААААААААААААААДВОКАТ ОБРАБОТЧИК
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
@@ -230,6 +265,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         lastMousePos.x = LOWORD(lParam);
         lastMousePos.y = HIWORD(lParam);
         SetCapture(hWnd);
+        break;
+    case WM_MOUSEWHEEL:
+        if(k_zoom >  -dk_zoom * GET_WHEEL_DELTA_WPARAM(wParam) && (k_zoom < 0.1 || GET_WHEEL_DELTA_WPARAM(wParam) < 0))
+            k_zoom += dk_zoom * GET_WHEEL_DELTA_WPARAM(wParam);
+        R_e = R_earth * k_zoom;
+        for(int i = 0; i < 360; i++){
+            earth[i].x = R_e * std::sin((float)i / 180 * pi) + x_c;
+            earth[i].y = R_e * std::cos((float)i / 180 * pi) + y_c;
+        }
+        pc1.projectCloud(R_e, 600, 300, n);
+        InvalidateRect(hWnd, NULL, TRUE);
         break;
     case WM_MOUSEMOVE: {
         if (isDragging) {
@@ -331,12 +377,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         libsgp4::Eci eci = sgp4.FindPosition(time);
         //std::cout << eci.Position() << std::endl;
         i = (time - startTime) / timeStep;
-        cout << i << endl;
+        //cout << i << endl;
         r[i] = new float[3];
         r[i][0] = eci.Position().x;
         r[i][1] = eci.Position().y;
         r[i][2] = eci.Position().z;
-        cout << r[i][0] << " " << r[i][1] << " " << r[i][2] << endl;
+        //cout << r[i][0] << " " << r[i][1] << " " << r[i][2] << endl;
     }
     cout << "Orbit array generated" << endl;
     pc1.set_r3(r, i + 1);
@@ -347,7 +393,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     //TLE processing end
     cout << "TLE processed" << endl;
 
-    POINTS* earth = new POINTS[360];
     for(int i = 0; i < 360; i++){
         earth[i].x = R_e * std::sin((float)i / 180 * pi) + x_c;
         earth[i].y = R_e * std::cos((float)i / 180 * pi) + y_c;
@@ -412,7 +457,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 LineTo(hdc_pamiat, points2[0].x, points2[0].y);
 
                 //TLE processing begin
-                MoveToEx(hdc_pamiat, (int)pc1.points[0].x, (int)pc1.points[0].y, NULL);
+                /*MoveToEx(hdc_pamiat, (int)pc1.points[0].x, (int)pc1.points[0].y, NULL);
                 for (size_t i = 1; i < pc1.get_length(); i++) {
                     if(pc1.mask[i])
                         LineTo(hdc_pamiat, (int)pc1.points[i].x, (int)pc1.points[i].y);
@@ -420,7 +465,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                         MoveToEx(hdc_pamiat, (int)pc1.points[i].x, (int)pc1.points[i].y, NULL);
                 }
                 if(pc1.mask[0])
-                    LineTo(hdc_pamiat, (int)pc1.points[0].x, (int)pc1.points[0].y);
+                    LineTo(hdc_pamiat, (int)pc1.points[0].x, (int)pc1.points[0].y);*/
+                pc1.draw(hdc_pamiat, 255, 0, 0);
+                
                 //TLE processing end
 
                 hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
