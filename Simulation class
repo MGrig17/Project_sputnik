@@ -1,0 +1,650 @@
+#ifndef UNICODE
+#define UNICODE
+#define UNICODE_WAS_UNDEFINED
+#endif
+
+#include <windows.h>
+#include <vector>
+#include <cmath>
+#include <string>
+#include <iostream>
+#include <fstream>
+using namespace std;
+
+#include "sgp4/SGP4.h"
+#include "sgp4/Tle.h"
+#include "sgp4/Util.h"
+#include "sgp4/Vector.h"
+#include "sgp4/Globals.h"
+#include "sgp4/DateTime.h"
+#include "sgp4/TimeSpan.h"
+
+#define pi 3.14159265f
+#define NUM_POINTS 100
+#define R_earth 6400 //радиус Земли в км
+#define x_c 600
+#define y_c 300
+
+// Глобальные переменные
+std::vector<POINT> points1;
+std::vector<POINT> points2;
+//POINTS* earth = new POINTS[360];
+float n[3] = { 1.0f, 0.0f, -1.0f };
+bool isDragging = false;
+bool ytro_bobroe = false;
+POINT lastMousePos;
+//координаты центра окна
+float k_zoom = 0.04; //масштабный коэффициент, число пикселей на км
+const float dk_zoom = 0.00005; //изменение масштабного коэффициента при прокрутке колёсика мыши на 1 у. е.
+//LONG x_c = 600;
+//LONG y_c = 300;
+LONG R_e = R_earth * k_zoom; //радиус Земли в пикселях
+
+struct GraphPoint {
+    POINT point;
+    bool mask;
+    float r3[3];
+};
+
+template<typename T>
+struct Triplet {
+    T num1;
+    T num2;
+    T num3;
+};
+
+class PointsCloud {
+public:
+    PointsCloud() {
+        N = 0;
+        points = nullptr;
+        r3 = nullptr;
+    }
+    PointsCloud(const int& N_) {
+        N = N_;
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+    }
+    PointsCloud(PointsCloud& pc) {
+        cout << "Clone constructor is called" << endl;
+        N = pc.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for(int i = 0; i < N; i++) {
+            points[i].point = pc.get_points()[i].point;
+            points[i].mask = pc.get_points()[i].mask;
+            r3[i].num1 = pc.get_r3()[i].num1;
+            r3[i].num2 = pc.get_r3()[i].num2;
+            r3[i].num3 = pc.get_r3()[i].num3;
+        }
+        cout << "Cloning has been completed" << endl;
+    }
+
+    PointsCloud& operator= (const PointsCloud& pc) {
+        cout << "Custom assignment operator is called" << endl;
+        delete[] points;
+        delete[] r3;
+        N = pc.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for(int i = 0; i < N; i++) {
+            points[i].point = pc.get_points()[i].point;
+            points[i].mask = pc.get_points()[i].mask;
+            r3[i].num1 = pc.get_r3()[i].num1;
+            r3[i].num2 = pc.get_r3()[i].num2;
+            r3[i].num3 = pc.get_r3()[i].num3;
+        }
+        cout << "Custom assignment has been completed" << endl;
+    }
+
+    void projectCloud(const LONG& R_e, const float* n, const float& k_zoom) {
+        const float norm = std::sqrt(n[0] * n[0] + n[1] * n[1]); //нормировочный коэффициент для вектора базиса локальной системы координат, лежащего в плоскости xy
+        float r2[2]; //элемент r3 в локальных координатах плоскости проектирования
+        for (int i = 0; i < N; i++) {
+            r2[0] = 0;
+            r2[1] = 0;
+            float t = 2 * pi * i / (N - 1); //параметр уравнения эллипса
+            //cout << "B" << endl;
+            /*float a1[3]; //a1=c-(c*n)*n
+            float a2[3]; //a2=u-(u*n)*n
+            float a3[3]; //a3=v-(v*n)*n
+            for(int j = 0; j < 3; j++) {
+                a1[j] = c[j] - (c[0]*n[0] + c[1]*n[1] + c[2]*n[2]) * n[j];
+                a2[j] = u[j] - (u[0]*n[0] + u[1]*n[1] + u[2]*n[2]) * n[j];
+                a3[j] = v[j] - (v[0]*n[0] + v[1]*n[1] + v[2]*n[2]) * n[j];
+                r3[i][j] = a1[j] + a2[j] * std::cos(t) + a3[j] * std::sin(t);
+            }*/
+            if (n[0] != 0 || n[1] != 0) {
+                r2[0] = (n[1] * r3[i].num1 - n[0] * r3[i].num2) / norm;
+                r2[1] = r3[i].num1 * n[0] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) + r3[i].num2 * n[1] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) - r3[i].num3 * std::sqrt(n[0] * n[0] + n[1] * n[1]);
+            }
+            else {
+                r2[0] = r3[i].num1;
+                r2[1] = r3[i].num2 * -1;
+            }
+            r2[0] *= k_zoom;
+            r2[0] += x_c;
+            r2[1] *= k_zoom;
+            r2[1] += y_c;
+            points[i].point.x = (LONG)r2[0];
+            points[i].point.y = (LONG)r2[1];
+            /*
+             * Condition 1 returns true if graphical point ('points[i]') is further from the Earth center than the Earth border itself
+             * Condition 2 returns true if physical point ('r3[i]') is located between the plane of projection and the camera (i. e. is located before the Earth)
+             */
+            points[i].mask = (std::sqrt((points[i].point.x - x_c) * (points[i].point.x - x_c) + (points[i].point.y - y_c) * (points[i].point.y - y_c)) > R_e) || (r3[i].num1 * n[0] + r3[i].num2 * n[1] + r3[i].num3 * n[2] > 0);
+        }
+    }
+
+    int draw(const HDC& hdc, const int& red, const int& green, const int& blue) {
+        if(N != 0) {
+            HPEN hPen = CreatePen(PS_SOLID, 2, RGB(red, green, blue));
+            HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+            MoveToEx(hdc, (int)points[0].point.x, (int)points[0].point.y, NULL);
+            for (size_t i = 1; i < N; i++) {
+                if(points[i].mask)
+                    LineTo(hdc, (int)points[i].point.x, (int)points[i].point.y);
+                else
+                    MoveToEx(hdc, (int)points[i].point.x, (int)points[i].point.y, NULL);
+            }
+            if(points[0].mask)
+                LineTo(hdc, (int)points[0].point.x, (int)points[0].point.y);
+            return 0;
+        }
+        else {
+            cerr << "RUNTIME EXCEPTION: attempted to draw a null-PointsCloud" << endl;
+            return -1;
+        }
+    }
+
+    void set_r3(float**& r3_, const int& N_) {
+        N = N_;
+        if(points != nullptr)
+            delete[] points;
+            delete[] r3;
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        cout << N << endl;
+        for(int i  = 0; i < N; i++) {
+            cout << i << endl;
+            r3[i].num1 = r3_[i][0];
+            r3[i].num2 = r3_[i][1];
+            r3[i].num3 = r3_[i][2];
+        }
+    }
+
+    int get_length() const {
+        return N;
+    }
+    GraphPoint* get_points() const {
+        return points;
+    }
+    Triplet<float>* get_r3() const {
+        return r3;
+    }
+
+    ~PointsCloud() {
+        cout << "PointsCloud destructor is called" << endl;
+        delete[] points;
+        delete[] r3;
+    }
+
+protected:
+    GraphPoint* points; //точки для отрисовки проекции в графическом виджете
+    Triplet<float>* r3;
+    int N;
+};
+
+class Orbit: public PointsCloud {
+public:
+    Orbit(): PointsCloud() {
+        timeFirst = libsgp4::DateTime(0);
+        timeStep = 0;
+        polar.clear();
+    }
+    Orbit(int N_): PointsCloud(N_) {
+        timeFirst = libsgp4::DateTime(0);
+        timeStep = 0;
+        polar.clear();
+    }
+    Orbit(const Orbit& o) {
+        cout << "Clone constructor is called" << endl;
+        N = o.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for(int i = 0; i < N; i++) {
+            points[i].point = o.get_points()[i].point;
+            points[i].mask = o.get_points()[i].mask;
+            r3[i].num1 = o.get_r3()[i].num1;
+            r3[i].num2 = o.get_r3()[i].num2;
+            r3[i].num3 = o.get_r3()[i].num3;
+        }
+        polar = o.polar;
+        timeStep = o.timeStep;
+        timeFirst = o.timeFirst;
+        cout << "Cloning has been completed" << endl;
+    }
+
+    Orbit& operator= (const Orbit& o) {
+        cout << "Custom assignment operator is called" << endl;
+        delete[] points;
+        delete[] r3;
+        N = o.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for(int i = 0; i < N; i++) {
+            points[i].point = o.get_points()[i].point;
+            points[i].mask = o.get_points()[i].mask;
+            r3[i].num1 = o.get_r3()[i].num1;
+            r3[i].num2 = o.get_r3()[i].num2;
+            r3[i].num3 = o.get_r3()[i].num3;
+        }
+        polar = o.polar;
+        timeStep = o.timeStep;
+        timeFirst = o.timeFirst;
+        cout << "Custom assignment has been completed" << endl;
+    }
+
+    /*
+     * @brief This function builds satellite's trajectory over the sky of given observatory
+     * @param obs stores ECI coordinates of the observatory at timeStart moment
+     * @param timeStart stores the datetime for the beginning of the visualisation
+     * @param timeEnd stores the datetime for the ending of the visualisation
+     */
+    void SkyProject(const float* obs, const libsgp4::DateTime& timeStart, const libsgp4::DateTime& timeEnd) {
+        libsgp4::DateTime time = timeStart;
+        while(time < timeEnd) {
+            libsgp4::TimeSpan dt_raw = time - timeFirst;
+            float dt_imd = dt_raw.TotalSeconds(); //dt_intermediate
+            float dt_rfd = (long)dt_imd % (int)(timeStep * N); //dt_refined
+            int i = dt_rfd / timeStep; //r3 array index of element which corresponds to the satellite position at 'time'
+        }
+    }
+
+    void set_timeStep(float timeStep_) { timeStep = timeStep_; }
+    float get_timeStep() { return timeStep; }
+
+    void set_timeFirst(libsgp4::DateTime timeFirst_) { timeFirst = timeFirst_; }
+    libsgp4::DateTime get_timeFirst() { return timeFirst; }
+
+private:
+    vector<GraphPoint> polar;
+    vector<libsgp4::DateTime> polar_t; //datetimes corresponding to points in polar.
+    float timeStep; //time interval in seconds between two consequent points
+    libsgp4::DateTime timeFirst; //datetime corresponding to the first point in r3 array
+};
+
+class Simulation {
+public:
+    Simulation() {
+        k_zoom = 0.02;
+        earth = new POINTS[360];
+        updateEarth();
+    }
+    Simulation(const float& k_zoom_) {
+        k_zoom = k_zoom_;
+        earth = new POINTS[360];
+        updateEarth();
+    }
+
+    void add_orbit(const string& name, const string& tle_line1, const string& tle_line2, const float& time_step, const int& clRed, const int& clGreen, const int& clBlue) {
+        const libsgp4::Tle tle(name, tle_line1, tle_line2);
+        const libsgp4::SGP4 sgp4(tle);
+        cout << "TLE epoch: " << tle.Epoch() << endl;
+        const float minutes_in_day = 60 * 24;
+        const float end_time = minutes_in_day / tle.MeanMotion();
+        const int r_len = end_time / time_step;
+        float** r = new float*[r_len];
+        for(int i = 0; i < r_len; i++) {
+            libsgp4::Eci eci = sgp4.FindPosition(i * time_step);
+            //std::cout << eci.Position() << std::endl;
+            //cout << i << endl;
+            r[i] = new float[3];
+            r[i][0] = eci.Position().x;
+            r[i][1] = eci.Position().y;
+            r[i][2] = eci.Position().z;
+        }
+        Orbit new_orbit = Orbit();
+        new_orbit.set_r3(r, r_len);
+        new_orbit.set_timeStep(time_step * 60);
+        new_orbit.set_timeFirst(tle.Epoch());
+        Triplet<int> new_orbit_color = {clRed, clGreen, clBlue};
+        satellites.push_back(new_orbit);
+        sat_color.push_back(new_orbit_color);
+        for(int i = 0; i < r_len; i++) {
+            delete[] r[i];
+        }
+        delete[] r;
+    }
+
+    int draw(const HDC& hdc) {
+        int res = 0;
+        for(int i = 0; i < satellites.size(); i++) {
+            res += satellites[i].draw(hdc, sat_color[i].num1, sat_color[i].num2, sat_color[i].num3);
+        }
+        HPEN hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+        HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+        MoveToEx(hdc, earth[0].x, earth[0].y, NULL);
+        for (size_t i = 1; i < 360; i++) {
+            LineTo(hdc, earth[i].x, earth[i].y);
+        }
+        LineTo(hdc, earth[0].x, earth[0].y);
+        if(res != 0) {
+            cerr << "RUNTIME EXCEPTION: Method 'draw' of an object of 'Graph3D' class has malfunctioned " << -res << " times" << endl;
+        }
+        return res;
+    }
+
+    void updateGraph3D(const float* n) {
+        for(int i = 0; i < satellites.size(); i++) {
+            satellites[i].projectCloud(R_earth * k_zoom, n, k_zoom);
+        }
+    }
+
+    void scroll(const float& dk_zoom, const float* n) {
+        k_zoom += dk_zoom;
+        updateEarth();
+        updateGraph3D(n);
+    }
+
+private:
+    void updateEarth() {
+        for(int i = 0; i < 360; i++){
+            earth[i].x = R_earth * k_zoom * std::sin((float)i / 180 * pi) + x_c;
+            earth[i].y = R_earth * k_zoom * std::cos((float)i / 180 * pi) + y_c;
+        }
+    }
+
+    POINTS* earth;
+    float k_zoom;
+    vector<Triplet<int>> sat_color;
+    vector<Orbit> satellites;
+
+};
+
+//Orbit pc1 = Orbit();
+Simulation sim(k_zoom);
+
+// Функция проекции эллипса
+void ProjectEllipse(float* c, float* u, float* v, float* n, int N, float norm, std::vector<POINT>& points) {
+    points.clear();
+    points.resize(N);
+    float** r3 = new float* [N];
+    float** r2 = new float* [N];
+    for (int i = 0; i < N; i++) {
+        r3[i] = new float[3];
+        r2[i] = new float[2];
+    }
+    for (int i = 0; i < N; i++) {
+        float t = 2 * pi * i / (N - 1);
+        float a1[3]; //a1=c-(c*n)*n
+        float a2[3]; //a2=u-(u*n)*n
+        float a3[3]; //a3=v-(v*n)*n
+        for (int j = 0; j < 3; j++) {
+            a1[j] = c[j] - (c[0] * n[0] + c[1] * n[1] + c[2] * n[2]) * n[j];
+            a2[j] = u[j] - (u[0] * n[0] + u[1] * n[1] + u[2] * n[2]) * n[j];
+            a3[j] = v[j] - (v[0] * n[0] + v[1] * n[1] + v[2] * n[2]) * n[j];
+            r3[i][j] = a1[j] + a2[j] * std::cos(t) + a3[j] * std::sin(t);
+        }
+        if (n[0] != 0 || n[1] != 0) {
+            r2[i][0] = (n[1] * r3[i][0] - n[0] * r3[i][1]) / norm;
+            r2[i][1] = r3[i][0] * n[0] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) + r3[i][1] * n[1] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) - r3[i][2] * std::sqrt(n[0] * n[0] + n[1] * n[1]);
+        }
+        else {
+            r2[i][0] = r3[i][0];
+            r2[i][1] = r3[i][1] * -1;
+        }
+
+        r2[i][0] += 15;
+        r2[i][0] *= 50;
+        r2[i][1] += 10;
+        r2[i][1] *= 50;
+        points[i].x = (LONG)r2[i][0];
+        points[i].y = (LONG)r2[i][1];
+    }
+    for (int i = 0; i < N; i++) {
+        delete[] r3[i];
+        delete[] r2[i];
+    }
+    delete[] r3;
+    delete[] r2;
+}
+void ResizeWindowTo90Percent(HWND hWnd) {
+    RECT workArea;
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+    int width = (workArea.right - workArea.left) * 0.9; // - вместо 90% можно сделать любое другое кол-во процентов
+    int height = (workArea.bottom - workArea.top) * 0.9;
+    int x = workArea.left + (workArea.right - workArea.left - width) / 2;
+    int y = workArea.top + (workArea.bottom - workArea.top - height) / 2;
+    SetWindowPos(
+        hWnd,
+        NULL,
+        x, y,
+        width, height,
+        SWP_NOZORDER | SWP_FRAMECHANGED
+    );
+}
+
+// ААААААААААААААААААДВОКАТ ОБРАБОТЧИК
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_CREATE:
+        ResizeWindowTo90Percent(hWnd);
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    case WM_ENTERSIZEMOVE:
+        isDragging = true; // Блокируем пересчёт при перемещении окна
+        break;
+    case WM_LBUTTONDOWN:
+        isDragging = true;
+        lastMousePos.x = LOWORD(lParam);
+        lastMousePos.y = HIWORD(lParam);
+        SetCapture(hWnd);
+        break;
+    case WM_MOUSEWHEEL:
+        if(k_zoom >  -dk_zoom * GET_WHEEL_DELTA_WPARAM(wParam) && (k_zoom < 0.1 || GET_WHEEL_DELTA_WPARAM(wParam) < 0))
+            sim.scroll(dk_zoom * GET_WHEEL_DELTA_WPARAM(wParam), n);
+            InvalidateRect(hWnd, NULL, TRUE);
+        break;
+    case WM_MOUSEMOVE: {
+        if (isDragging) {
+            POINT currentMousePos;
+            currentMousePos.x = LOWORD(lParam);
+            currentMousePos.y = HIWORD(lParam);
+
+            // Вычисляем изменение углов
+            float dx = lastMousePos.x - currentMousePos.x;
+            float dy = lastMousePos.y - currentMousePos.y;
+
+            // Обновляем нормальный вектор
+            float theta = acosf(n[2]);
+            float phi = atan2f(n[1], n[0]);
+
+            theta += 0.01f * dy;
+            phi += 0.01f * dx;
+
+            n[0] = sinf(theta) * cosf(phi);
+            n[1] = sinf(theta) * sinf(phi);
+            n[2] = cosf(theta);
+
+            // Нормализуем вектор
+            float norm = sqrtf(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+            n[0] /= norm;
+            n[1] /= norm;
+            n[2] /= norm;
+
+            // Пересчитываем проекции
+            float c1[3] = { 0, 0, 0 };
+            float u1[3] = { 5, 0, 0 };
+            float v1[3] = { 0, 5, 0 };
+            float c2[3] = { 1, 0, 0 };
+            float u2[3] = { 0, 3, 0 };
+            float v2[3] = { 0, 0, 4 };
+            float norm2D = sqrtf(n[0] * n[0] + n[1] * n[1]);
+
+            ProjectEllipse(c1, u1, v1, n, NUM_POINTS, norm2D, points1);
+            ProjectEllipse(c2, u2, v2, n, NUM_POINTS, norm2D, points2);
+
+            //TLE processing begin
+            sim.updateGraph3D(n);
+            //TLE processing end
+
+            // Перерисовываем окно
+            InvalidateRect(hWnd, NULL, TRUE);
+
+            lastMousePos = currentMousePos;
+        }
+        break;
+    }
+
+    case WM_LBUTTONUP:
+        isDragging = false;
+        ReleaseCapture();
+        break;
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) {
+            PostQuitMessage(0);
+        }
+        break;
+    case WM_ERASEBKGND:
+        return 1;
+    case WM_PAINT: {
+        ytro_bobroe = true;
+        break;
+    }
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+
+// Точка входа
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // Инициализация данных
+    float c1[3] = { 0, 0, 0 };
+    float u1[3] = { 5, 0, 0 };
+    float v1[3] = { 0, 5, 0 };
+    float c2[3] = { 1, 0, 0 };
+    float u2[3] = { 0, 3, 0 };
+    float v2[3] = { 0, 0, 4 };
+    float norm = std::sqrt(n[0] * n[0] + n[1] * n[1]);
+
+    //TLE processing begin
+    std::string name = "NOAA 19";
+    std::string line1 = "1 33591U 09005A   24062.45833333  .00000061  00000-0  88872-5 0  9993";
+    std::string line2 = "2 33591  99.1926 184.7784 0013268 304.8974  55.0816 14.12402469820552";
+    //libsgp4::Tle tle(name, line1, line2);
+    //libsgp4::SGP4 sgp4(tle);
+    float startTime = 0.0;
+    float endTime = 100.0;
+    float timeStep = 0.1;
+    sim.add_orbit(name, line1, line2, timeStep, 255, 0, 0);
+    /*int i;
+    int r_len = (endTime - startTime) / timeStep;
+    cout << r_len << endl;
+    float** r = new float* [r_len];
+    for (double time = startTime; time <= endTime; time += timeStep) {
+        libsgp4::Eci eci = sgp4.FindPosition(time);
+        //std::cout << eci.Position() << std::endl;
+        i = (time - startTime) / timeStep;
+        //cout << i << endl;
+        r[i] = new float[3];
+        r[i][0] = eci.Position().x;
+        r[i][1] = eci.Position().y;
+        r[i][2] = eci.Position().z;
+        //cout << r[i][0] << " " << r[i][1] << " " << r[i][2] << endl;
+    }
+    cout << "Orbit array generated" << endl;
+    pc1.set_r3(r, i + 1);
+    //cout << r[0][0] << endl;
+    cout << "R3 array set" << endl;
+    pc1.projectCloud(R_e, 600, 300, n);*/
+
+    //TLE processing end
+    cout << "TLE processed" << endl;
+
+    /*for(int i = 0; i < 360; i++){
+        earth[i].x = R_e * std::sin((float)i / 180 * pi) + x_c;
+        earth[i].y = R_e * std::cos((float)i / 180 * pi) + y_c;
+    }*/
+
+    cout << "Earth created" << endl;
+
+    //ProjectEllipse(c1, u1, v1, n, NUM_POINTS, norm, points1);
+    //ProjectEllipse(c2, u2, v2, n, NUM_POINTS, norm, points2);
+    // Регистрация класса окна
+    WNDCLASS wc = { 0 };
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = L"SputnikTracker";
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    if (!RegisterClass(&wc)) {
+        MessageBox(NULL, L"Ошибка регистрации класса окна!", L"Ошибка", MB_ICONERROR);
+        return 1;
+    }
+    HWND hWnd = CreateWindow(
+        L"SputnikTracker", L"SPUTNIK Tracker",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        800, 600,
+        NULL, NULL, hInstance, NULL
+    );
+    if (!hWnd) {
+        MessageBox(NULL, L"Ошибка создания окна!", L"Ошибка", MB_ICONERROR);
+        return 1;
+    }
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        if (ytro_bobroe == true) {
+            ytro_bobroe = false;
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+
+            HDC hdc_pamiat = CreateCompatibleDC(hdc); // Это мы создаём "контекст устройства в памяти"
+            RECT rc;
+            GetClientRect(hWnd, &rc); // создаёт прямоугольник, где можно рисовать
+            HBITMAP hbm_rastr = CreateCompatibleBitmap(hdc, rc.right, rc.bottom); //добавляем растровое изоб
+            SelectObject(hdc_pamiat, hbm_rastr);
+
+            // Отрисовка в буфер
+            FillRect(hdc_pamiat, &rc, (HBRUSH)(COLOR_WINDOW + 1));
+
+            HPEN hPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+            HPEN hOldPen = (HPEN)SelectObject(hdc_pamiat, hPen);
+
+            if (!points1.empty() and !points2.empty()) {
+
+                /*hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+                hOldPen = (HPEN)SelectObject(hdc_pamiat, hPen);
+                MoveToEx(hdc_pamiat, earth[0].x, earth[0].y, NULL);
+                for (size_t i = 1; i < 360; i++) {
+                    LineTo(hdc_pamiat, earth[i].x, earth[i].y);
+                }
+                LineTo(hdc_pamiat, earth[0].x, earth[0].y);*/
+
+                sim.draw(hdc_pamiat);
+            }
+            BitBlt(hdc, 0, 0, rc.right, rc.bottom, hdc_pamiat, 0, 0, SRCCOPY); //это мы из буфера копируем на экран
+
+            DeleteObject(hbm_rastr); //Функция DeleteObject удаляет логическое перо, кисть, шрифт,
+            //растровое изображение, область или палитру, освобождая все системные ресурсы, связанные с объектом.
+            //После удаления объекта указанный дескриптор больше не действует. - из Microsoft
+
+            DeleteDC(hdc_pamiat); // Функция DeleteDC удаляет указанный контекст устройства (DC).
+            DeleteObject(hPen); // ручку удаялем
+
+            EndPaint(hWnd, &ps);
+        }
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return (int)msg.wParam;
+}
+
+#ifdef UNICODE_WAS_UNDEFINED
+#undef UNICODE
+#endif
