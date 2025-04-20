@@ -1,0 +1,406 @@
+struct GraphPoint {
+    POINT point;
+    bool mask;
+    float r3[3];
+};
+template<typename T>
+struct Triplet {
+    T num1;
+    T num2;
+    T num3;
+};
+Triplet<float>* ellipse(float* c, float* u, float* v, int N) {
+    Triplet<float>* r3 = new Triplet<float> [N];
+    for (int i = 0; i < N; i++) {
+        float t = 2 * pi * i / (N - 1);
+        r3[i].num1 = c[0] + u[0] * std::cos(t) + v[0] * std::sin(t);
+        r3[i].num2 = c[1] + u[1] * std::cos(t) + v[1] * std::sin(t);
+        r3[i].num3 = c[2] + u[2] * std::cos(t) + v[2] * std::sin(t);
+    }
+    return r3;
+}
+class PointsCloud {
+public:
+    PointsCloud() {
+        N = 0;
+        points = nullptr;
+        r3 = nullptr;
+    }
+    PointsCloud(const int& N_) {
+        N = N_;
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+    }
+    PointsCloud(PointsCloud& pc) {
+        cout << "Clone constructor is called" << endl;
+        N = pc.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for (int i = 0; i < N; i++) {
+            points[i].point = pc.get_points()[i].point;
+            points[i].mask = pc.get_points()[i].mask;
+            r3[i].num1 = pc.get_r3()[i].num1;
+            r3[i].num2 = pc.get_r3()[i].num2;
+            r3[i].num3 = pc.get_r3()[i].num3;
+        }
+        cout << "Cloning has been completed" << endl;
+    }
+    PointsCloud& operator= (const PointsCloud& pc) {
+        cout << "Custom assignment operator is called" << endl;
+        delete[] points;
+        delete[] r3;
+        N = pc.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for (int i = 0; i < N; i++) {
+            points[i].point = pc.get_points()[i].point;
+            points[i].mask = pc.get_points()[i].mask;
+            r3[i].num1 = pc.get_r3()[i].num1;
+            r3[i].num2 = pc.get_r3()[i].num2;
+            r3[i].num3 = pc.get_r3()[i].num3;
+        }
+        cout << "Custom assignment has been completed" << endl;
+    }
+    void projectCloud(const LONG& R_e, const float* n, const float& k_zoom) {
+        //cout << boolalpha;
+        const float norm = std::sqrt(n[0] * n[0] + n[1] * n[1]); //нормировочный коэффициент для вектора базиса локальной системы координат, лежащего в плоскости xy
+        float r2[2]; //элемент r3 в локальных координатах плоскости проектирования
+        for (int i = 0; i < N; i++) {
+            r2[0] = 0;
+            r2[1] = 0;
+            float t = 2 * pi * i / (N - 1); //параметр уравнения эллипса
+            if (n[0] != 0 || n[1] != 0) {
+                r2[0] = (n[1] * r3[i].num1 - n[0] * r3[i].num2) / norm;
+                r2[1] = r3[i].num1 * n[0] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) + r3[i].num2 * n[1] * n[2] / std::sqrt(n[0] * n[0] + n[1] * n[1]) - r3[i].num3 * std::sqrt(n[0] * n[0] + n[1] * n[1]);
+            }
+            else {
+                r2[0] = r3[i].num1;
+                r2[1] = r3[i].num2 * -1;
+            }
+            r2[0] *= k_zoom;
+            r2[0] += x_c;
+            r2[1] *= k_zoom;
+            r2[1] += y_c;
+            points[i].point.x = (LONG)r2[0];
+            points[i].point.y = (LONG)r2[1];
+            points[i].mask = (std::sqrt((points[i].point.x - x_c) * (points[i].point.x - x_c) + (points[i].point.y - y_c) * (points[i].point.y - y_c)) > R_e) || (r3[i].num1 * n[0] + r3[i].num2 * n[1] + r3[i].num3 * n[2] > 0);
+        }
+        //cout << points[0].point.x << points[0].point.y << points[0].mask;
+        //cout << points[30].point.x << points[30].point.y << points[30].mask;
+        //cout << noboolalpha << endl;
+    }
+    int draw(const HDC& hdc, const int& red, const int& green, const int& blue) {
+        if (N != 0) {
+            HPEN hPen = CreatePen(PS_SOLID, 2, RGB(red, green, blue));
+            HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+            MoveToEx(hdc, (int)points[0].point.x, (int)points[0].point.y, NULL);
+            for (size_t i = 1; i < N; i++) {
+                if (points[i].mask) {
+                    if(points[i - 1].mask)
+                        LineTo(hdc, (int)points[i].point.x, (int)points[i].point.y);
+                    else
+                        MoveToEx(hdc, (int)points[i].point.x, (int)points[i].point.y, NULL);
+                }
+            }
+            if (points[0].mask) {
+                if(points[N - 1].mask)
+                    LineTo(hdc, (int)points[0].point.x, (int)points[0].point.y);
+                else
+                    MoveToEx(hdc, (int)points[0].point.x, (int)points[0].point.y, NULL);
+            }
+            SelectObject(hdc, hOldPen);
+            DeleteObject(hPen);
+            return 0;
+        }
+        else {
+            cerr << "RUNTIME EXCEPTION: attempted to draw a null-PointsCloud" << endl;
+            return -1;
+        }
+    }
+    void set_r3(float**& r3_, const int& N_) {
+        N = N_;
+        if (points != nullptr)
+            delete[] points;
+        delete[] r3;
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        cout << N << endl;
+        for (int i = 0; i < N; i++) {
+            cout << i << endl;
+            r3[i].num1 = r3_[i][0];
+            r3[i].num2 = r3_[i][1];
+            r3[i].num3 = r3_[i][2];
+        }
+    }
+    void set_r3(Triplet<float>*& r3_, const int& N_) {
+        N = N_;
+        if (points != nullptr)
+            delete[] points;
+        delete[] r3;
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        cout << N << endl;
+        for (int i = 0; i < N; i++) {
+            cout << i << endl;
+            r3[i].num1 = r3_[i].num1;
+            r3[i].num2 = r3_[i].num2;
+            r3[i].num3 = r3_[i].num3;
+        }
+    }
+    int get_length() const {
+        return N;
+    }
+    GraphPoint* get_points() const {
+        return points;
+    }
+    Triplet<float>* get_r3() const {
+        return r3;
+    }
+    ~PointsCloud() {
+        cout << "PointsCloud destructor is called" << endl;
+        delete[] points;
+        delete[] r3;
+    }
+protected:
+    GraphPoint* points; //точки для отрисовки проекции в графическом виджете
+    Triplet<float>* r3;
+    int N;
+};
+class Orbit : public PointsCloud {
+public:
+    Orbit() : PointsCloud() {
+        //timeFirst = libsgp4::DateTime(0);
+        //timeStep = 0;
+        //polar.clear();
+    }
+    Orbit(int N_) : PointsCloud(N_) {
+        //timeFirst = libsgp4::DateTime(0);
+        //timeStep = 0;
+        //polar.clear();
+    }
+    Orbit(const Orbit& o) {
+        cout << "Clone constructor is called" << endl;
+        N = o.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for (int i = 0; i < N; i++) {
+            points[i].point = o.get_points()[i].point;
+            points[i].mask = o.get_points()[i].mask;
+            r3[i].num1 = o.get_r3()[i].num1;
+            r3[i].num2 = o.get_r3()[i].num2;
+            r3[i].num3 = o.get_r3()[i].num3;
+        }
+        //polar = o.polar;
+        //timeStep = o.timeStep;
+        //timeFirst = o.timeFirst;
+        cout << "Cloning has been completed" << endl;
+    }
+    Orbit& operator= (const Orbit& o) {
+        cout << "Custom assignment operator is called" << endl;
+        delete[] points;
+        delete[] r3;
+        N = o.get_length();
+        points = new GraphPoint[N];
+        r3 = new Triplet<float>[N];
+        for (int i = 0; i < N; i++) {
+            points[i].point = o.get_points()[i].point;
+            points[i].mask = o.get_points()[i].mask;
+            r3[i].num1 = o.get_r3()[i].num1;
+            r3[i].num2 = o.get_r3()[i].num2;
+            r3[i].num3 = o.get_r3()[i].num3;
+        }
+        //polar = o.polar;
+        //timeStep = o.timeStep;
+        //timeFirst = o.timeFirst;
+        cout << "Custom assignment has been completed" << endl;
+    }
+    /*void SkyProject(const float* obs, const libsgp4::DateTime& timeStart, const libsgp4::DateTime& timeEnd) {
+        libsgp4::DateTime time = timeStart;
+        while (time < timeEnd) {
+            libsgp4::TimeSpan dt_raw = time - timeFirst;
+            float dt_imd = dt_raw.TotalSeconds(); //dt_intermediate
+            float dt_rfd = (long)dt_imd % (int)(timeStep * N); //dt_refined
+            int i = dt_rfd / timeStep; //r3 array index of element which corresponds to the satellite position at 'time'
+        }
+    }*/
+    //void set_timeStep(float timeStep_) { timeStep = timeStep_; }
+    //float get_timeStep() { return timeStep; }
+    //void set_timeFirst(libsgp4::DateTime timeFirst_) { timeFirst = timeFirst_; }
+    //libsgp4::DateTime get_timeFirst() { return timeFirst; }
+    ~Orbit() {
+        cout << "Orbit destructor is called" << endl;
+    }
+
+private:
+    //vector<GraphPoint> polar;
+    //vector<libsgp4::DateTime> polar_t; //datetimes corresponding to points in polar.
+    //float timeStep; //time interval in seconds between two consequent points
+    //libsgp4::DateTime timeFirst; //datetime corresponding to the first point in r3 array
+};
+class Simulation {
+public:
+    Simulation() {
+        k_zoom = 0.02;
+        earth = new POINTS[100];
+        surface = new PointsCloud[7];
+        float c[3] = {0, 0, 0};
+        float v[3] = {0, 0, R_earth};
+        for(int i = 0; i < 4; i++) {
+            float u[3] = {R_earth * std::sin(pi / 4 * i), R_earth * std::cos(pi / 4 * i), 0};
+            Triplet<float>* new_ellipse = ellipse(c, u, v, 30);
+            surface[i].set_r3(new_ellipse, 30);
+        }
+        float u[3];
+        v[0] = 0;
+        v[1] = R_earth;
+        v[2] = 0;
+        u[0] = R_earth;
+        u[1] = 0;
+        u[2] = 0;
+        Triplet<float>* new_ellipse = ellipse(c, u, v, 30);
+        surface[4].set_r3(new_ellipse, 30);
+
+
+        c[2] = R_earth / sqrt(2);
+        v[0] = 0;
+        v[1] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        v[2] = 0;
+        u[0] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        u[1] = 0;
+        u[2] = 0;
+        new_ellipse = ellipse(c, u, v, 30);
+        surface[5].set_r3(new_ellipse, 30);
+
+        c[2] = -R_earth / sqrt(2);
+        v[0] = 0;
+        v[1] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        v[2] = 0;
+        u[0] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        u[1] = 0;
+        u[2] = 0;
+        new_ellipse = ellipse(c, u, v, 30);
+        surface[6].set_r3(new_ellipse, 30);
+
+        updateEarth();
+    }
+    Simulation(const float& k_zoom_) {
+        k_zoom = k_zoom_;
+        earth = new POINTS[100];
+        surface = new PointsCloud[7];
+        float c[3] = {0, 0, 0};
+        float v[3] = {0, 0, R_earth};
+        for(int i = 0; i < 4; i++) {
+            float u[3] = {R_earth * std::sin(pi / 4 * i), R_earth * std::cos(pi / 4 * i), 0};
+            Triplet<float>* new_ellipse = ellipse(c, u, v, 30);
+            surface[i].set_r3(new_ellipse, 30);
+        }
+        float u[3];
+        v[0] = 0;
+        v[1] = R_earth;
+        v[2] = 0;
+        u[0] = R_earth;
+        u[1] = 0;
+        u[2] = 0;
+        Triplet<float>* new_ellipse = ellipse(c, u, v, 30);
+        surface[4].set_r3(new_ellipse, 30);
+
+
+        c[2] = R_earth / sqrt(2);
+        v[0] = 0;
+        v[1] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        v[2] = 0;
+        u[0] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        u[1] = 0;
+        u[2] = 0;
+        new_ellipse = ellipse(c, u, v, 30);
+        surface[5].set_r3(new_ellipse, 30);
+
+        c[2] = -R_earth / sqrt(2);
+        v[0] = 0;
+        v[1] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        v[2] = 0;
+        u[0] = sqrt(R_earth * R_earth - c[2] * c[2]);
+        u[1] = 0;
+        u[2] = 0;
+        new_ellipse = ellipse(c, u, v, 30);
+        surface[6].set_r3(new_ellipse, 30);
+
+        updateEarth();
+    }
+    void add_orbit(const string& name, const string& tle_line1, const string& tle_line2, const float& time_step, const int& clRed, const int& clGreen, const int& clBlue) {
+        const libsgp4::Tle tle(name, tle_line1, tle_line2);
+        const libsgp4::SGP4 sgp4(tle);
+        cout << "TLE epoch: " << tle.Epoch() << endl;
+        const float minutes_in_day = 60 * 24;
+        const float end_time = minutes_in_day / tle.MeanMotion();
+        const int r_len = end_time / time_step;
+        float** r = new float* [r_len];
+        for (int i = 0; i < r_len; i++) {
+            libsgp4::Eci eci = sgp4.FindPosition(i * time_step);
+            //std::cout << eci.Position() << std::endl;
+            //cout << i << endl;
+            r[i] = new float[3];
+            r[i][0] = eci.Position().x;
+            r[i][1] = eci.Position().y;
+            r[i][2] = eci.Position().z;
+        }
+        Orbit new_orbit = Orbit();
+        new_orbit.set_r3(r, r_len);
+        //new_orbit.set_timeStep(time_step * 60);
+        //new_orbit.set_timeFirst(tle.Epoch());
+        Triplet<int> new_orbit_color = { clRed, clGreen, clBlue };
+        satellites.push_back(new_orbit);
+        sat_color.push_back(new_orbit_color);
+        for (int i = 0; i < r_len; i++) {
+            delete[] r[i];
+        }
+        delete[] r;
+    }
+    int draw(const HDC& hdc) {
+        int res = 0;
+        HPEN hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+        HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+        MoveToEx(hdc, earth[0].x, earth[0].y, NULL);
+        for (size_t i = 1; i < 100; i++) {
+            LineTo(hdc, earth[i].x, earth[i].y);
+        }
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+        LineTo(hdc, earth[0].x, earth[0].y);
+        for (int  i = 0; i < 7; i++) {
+            res += surface[i].draw(hdc, 0, 0, 0);
+        }
+        for (int i = 0; i < satellites.size(); i++) {
+            res += satellites[i].draw(hdc, sat_color[i].num1, sat_color[i].num2, sat_color[i].num3);
+        }
+        if (res != 0) {
+            cerr << "RUNTIME EXCEPTION: Method 'draw' of an object of 'Graph3D' class has malfunctioned " << -res << " times" << endl;
+        }
+        return res;
+    }
+    void updateGraph3D(const float* n) {
+        for (int i = 0; i < satellites.size(); i++) {
+            satellites[i].projectCloud(R_earth * k_zoom, n, k_zoom);
+        }
+        for (int  i = 0; i < 7; i++) {
+            surface[i].projectCloud(R_earth * k_zoom, n, k_zoom);
+        }
+    }
+    void scroll(const float& dk_zoom, const float* n) {
+        k_zoom += dk_zoom;
+        updateEarth();
+        updateGraph3D(n);
+    }
+private:
+    void updateEarth() {
+        for (int i = 0; i < 100; i++) {
+            earth[i].x = R_earth * k_zoom * std::sin((float)i / 50 * pi) + x_c;
+            earth[i].y = R_earth * k_zoom * std::cos((float)i / 50 * pi) + y_c;
+        }
+    }
+    POINTS* earth;
+    float k_zoom;
+    vector<Triplet<int>> sat_color;
+    vector<Orbit> satellites;
+    PointsCloud* surface;
+};
