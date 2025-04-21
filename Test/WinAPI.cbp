@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="WinAPI" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/WinAPI" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-finput-charset=CP1251 -fexec-charset=CP866" />
+					<Add option="-mwindows" />
+					<Add option="-lgdi32" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/WinAPI" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Linker>
+			<Add library="C:/Program Files/CodeBlocks/MinGW/x86_64-w64-mingw32/lib/libgdi32.a" />
+			<Add library="C:/Program Files/CodeBlocks/MinGW/x86_64-w64-mingw32/lib/libcomctl32.a" />
+		</Linker>
+		<Unit filename="main.cpp" />
+		<Unit filename="sgp4/CoordGeodetic.cc" />
+		<Unit filename="sgp4/CoordGeodetic.h" />
+		<Unit filename="sgp4/CoordTopocentric.cc" />
+		<Unit filename="sgp4/CoordTopocentric.h" />
+		<Unit filename="sgp4/DateTime.cc" />
+		<Unit filename="sgp4/DateTime.h" />
+		<Unit filename="sgp4/DecayedException.cc" />
+		<Unit filename="sgp4/DecayedException.h" />
+		<Unit filename="sgp4/Eci.cc" />
+		<Unit filename="sgp4/Eci.h" />
+		<Unit filename="sgp4/Globals.cc" />
+		<Unit filename="sgp4/Globals.h" />
+		<Unit filename="sgp4/Observer.cc" />
+		<Unit filename="sgp4/Observer.h" />
+		<Unit filename="sgp4/OrbitalElements.cc" />
+		<Unit filename="sgp4/OrbitalElements.h" />
+		<Unit filename="sgp4/SGP4.cc" />
+		<Unit filename="sgp4/SGP4.h" />
+		<Unit filename="sgp4/SatelliteException.cc" />
+		<Unit filename="sgp4/SatelliteException.h" />
+		<Unit filename="sgp4/SolarPosition.cc" />
+		<Unit filename="sgp4/SolarPosition.h" />
+		<Unit filename="sgp4/TimeSpan.cc" />
+		<Unit filename="sgp4/TimeSpan.h" />
+		<Unit filename="sgp4/Tle.cc" />
+		<Unit filename="sgp4/Tle.h" />
+		<Unit filename="sgp4/TleException.cc" />
+		<Unit filename="sgp4/TleException.h" />
+		<Unit filename="sgp4/Util.cc" />
+		<Unit filename="sgp4/Util.h" />
+		<Unit filename="sgp4/Vector.cc" />
+		<Unit filename="sgp4/Vector.h" />
+		<Extensions>
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
