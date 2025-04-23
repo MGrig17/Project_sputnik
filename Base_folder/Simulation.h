@@ -22,6 +22,8 @@ public:
     Simulation(): observatory(55.92933, 37.52252, 0.197) { // Those are MIPT dormitory #3 geodetic coordinates: latitude, longitude and altitude respectively
         k_zoom = 0.02;
         earth = new GraphPoint[100];
+        for(int i = 0; i < 8; i++)
+            radar[i] = new GraphPoint[20];
         surface = new PointsCloud[7];
         float c[3] = {0, 0, 0};
         float v[3] = {0, 0, R_earth};
@@ -63,11 +65,15 @@ public:
 
         highlightedLoc = {-1, -1};
 
+        The_Radar();
+
         updateEarth();
 
     }
     Simulation(const float& k_zoom_): observatory(55.92933, 37.52252, 0.197) { // Those are MIPT dormitory #3 geodetic coordinates: latitude, longitude and altitude respectively
         k_zoom = k_zoom_;
+        for(int i = 0; i < 8; i++)
+            radar[i] = new GraphPoint[20];
         earth = new GraphPoint[100];
         surface = new PointsCloud[7];
         float c[3] = {0, 0, 0};
@@ -110,45 +116,52 @@ public:
 
         highlightedLoc = {-1, -1};
 
+        The_Radar();
+
         updateEarth();
     }
 
     void add_orbit(const string& name, const string& tle_line1, const string& tle_line2, const float& timeStep, const int& clRed, const int& clGreen, const int& clBlue) {
-        const libsgp4::Tle tle(name, tle_line1, tle_line2);
-        const libsgp4::SGP4 sgp4(tle);
-        //cout << "TLE epoch: " << tle.Epoch() << endl;
-        const float minutes_in_day = 60 * 24;
-        const float end_time = minutes_in_day / tle.MeanMotion();
-        float time_step = timeStep;
-        //cout << time_step << "!" << endl;
-        if(time_step == -1 || time_step == NULL) {
-            //cout << "Yeet!" << endl;
-            time_step = end_time / 100;
+        try {
+            const libsgp4::Tle tle(name, tle_line1, tle_line2);
+            const libsgp4::SGP4 sgp4(tle);
+            //cout << "TLE epoch: " << tle.Epoch() << endl;
+            const float minutes_in_day = 60 * 24;
+            const float end_time = minutes_in_day / tle.MeanMotion();
+            float time_step = timeStep;
+            //cout << time_step << "!" << endl;
+            if(time_step == -1 || time_step == NULL) {
+                //cout << "Yeet!" << endl;
+                time_step = end_time / 100;
+            }
+            const int r_len = end_time / time_step;
+            float** r = new float* [r_len];
+            for (int i = 0; i < r_len; i++) {
+                libsgp4::Eci eci = sgp4.FindPosition(i * time_step);
+                //std::cout << eci.Position() << std::endl;
+                //cout << i << endl;
+                r[i] = new float[3];
+                r[i][0] = eci.Position().x;
+                r[i][1] = eci.Position().y;
+                r[i][2] = eci.Position().z;
+            }
+            Orbit new_orbit = Orbit(sgp4);
+            new_orbit.set_r3(r, r_len);
+            new_orbit.set_timeStep(time_step);
+            new_orbit.skyProject(observatory, tle.Epoch(), tle.Epoch() + libsgp4::TimeSpan(10, 0, 0), x_c2, y_c2);
+            //new_orbit.set_timeFirst(tle.Epoch());
+            Triplet<int> new_orbit_color = { clRed, clGreen, clBlue };
+            satellites.push_back(new_orbit);
+            sat_color.push_back(new_orbit_color);
+            //cout << "polar_length = " << satellites[i].get_polar_length() << endl;
+            for (int i = 0; i < r_len; i++) {
+                delete[] r[i];
+            }
+            delete[] r;
         }
-        const int r_len = end_time / time_step;
-        float** r = new float* [r_len];
-        for (int i = 0; i < r_len; i++) {
-            libsgp4::Eci eci = sgp4.FindPosition(i * time_step);
-            //std::cout << eci.Position() << std::endl;
-            //cout << i << endl;
-            r[i] = new float[3];
-            r[i][0] = eci.Position().x;
-            r[i][1] = eci.Position().y;
-            r[i][2] = eci.Position().z;
+        catch(const libsgp4::TleException& e) {
+            cout << "Failed to create TLE with given params" << endl;
         }
-        Orbit new_orbit = Orbit(sgp4);
-        new_orbit.set_r3(r, r_len);
-        new_orbit.set_timeStep(time_step);
-        new_orbit.skyProject(observatory, tle.Epoch(), tle.Epoch() + libsgp4::TimeSpan(10, 0, 0), x_c2, y_c2);
-        //new_orbit.set_timeFirst(tle.Epoch());
-        Triplet<int> new_orbit_color = { clRed, clGreen, clBlue };
-        satellites.push_back(new_orbit);
-        sat_color.push_back(new_orbit_color);
-        //cout << "polar_length = " << satellites[i].get_polar_length() << endl;
-        for (int i = 0; i < r_len; i++) {
-            delete[] r[i];
-        }
-        delete[] r;
     }
     void remove_orbit() {
         satellites.pop_back();
@@ -157,8 +170,30 @@ public:
     int draw(const HDC& hdc) {
         //cout << "Entered sim.draw" << endl;
         int res = 0;
-        HPEN hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+        HPEN hPen = CreatePen(PS_SOLID, 2, RGB(139, 139, 139));
         HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+        for (size_t j = 1; j<8; j++) {
+            MoveToEx(hdc, radar[j][0].point.x, radar[j][0].point.y, NULL);
+            for (size_t i = 1; i < 20; i++) {
+                LineTo(hdc, radar[j][i].point.x, radar[j][i].point.y);
+            }
+            LineTo(hdc, radar[j][0].point.x, radar[j][0].point.y);
+        }
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+
+        hPen = CreatePen(PS_SOLID, 7, RGB(0, 0, 0));
+        hOldPen = (HPEN)SelectObject(hdc, hPen);
+        MoveToEx(hdc, radar[0][0].point.x, radar[0][0].point.y, NULL);
+        for (size_t i = 1; i < 20; i++) {
+            LineTo(hdc, radar[0][i].point.x, radar[0][i].point.y);
+        }
+        LineTo(hdc, radar[0][0].point.x, radar[0][0].point.y);
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+
+        hPen = CreatePen(PS_SOLID, 6, RGB(0, 0, 0));
+        hOldPen = (HPEN)SelectObject(hdc, hPen);
         MoveToEx(hdc, earth[0].point.x, earth[0].point.y, NULL);
         for (size_t i = 1; i < 100; i++) {
             if(earth[i].point.x < x_border && earth[i - 1].point.x < x_border)
@@ -168,6 +203,11 @@ public:
         }
         if(earth[0].point.x < x_border && earth[99].point.x < x_border)
             LineTo(hdc, earth[0].point.x, earth[0].point.y);
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+
+        hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+        hOldPen = (HPEN)SelectObject(hdc, hPen);
         //cout << "Earth redrawn" << endl;
         if(highlightedLoc.x != -1) {
             MoveToEx(hdc, (int) highlightedLoc.x - 10, (int) highlightedLoc.y, (LPPOINT) NULL);
@@ -262,6 +302,34 @@ private:
             earth[i].point.y = R_earth * k_zoom * std::cos((float)i / 50 * pi) + y_c1;
         }
     }
+    void The_Radar() {
+        for (int i = 0; i < 20; i++) {
+            radar[0][i].point.x = R_earth * 0.04 * std::sin((float)i / 10 * pi) +  x_c2;
+            radar[0][i].point.y = R_earth * 0.04 * std::cos((float)i / 10 * pi) +  y_c2;
+
+            radar[1][i].point.x = R_earth * 0.032 * std::sin((float)i / 10 * pi) + x_c2;
+            radar[1][i].point.y = R_earth * 0.032 * std::cos((float)i / 10 * pi) + y_c2;
+
+            radar[2][i].point.x = R_earth * 0.024 * std::sin((float)i / 10 * pi) + x_c2;
+            radar[2][i].point.y = R_earth * 0.024 * std::cos((float)i / 10 * pi) + y_c2;
+
+            radar[3][i].point.x = R_earth * 0.016 * std::sin((float)i / 10 * pi) + x_c2;
+            radar[3][i].point.y = R_earth * 0.016 * std::cos((float)i / 10 * pi) + y_c2;
+
+            radar[4][i].point.x = x_c2;
+            radar[4][i].point.y = R_earth * 0.04 * std::cos((float)i / 10 * pi) + y_c2;
+
+            radar[5][i].point.x = R_earth * 0.04 * std::sin((float)i / 10 * pi) + x_c2;
+            radar[5][i].point.y = y_c2;
+
+            radar[6][i].point.x = R_earth * 0.04 * sqrt(2) / 2 * std::sin((float)i / 10 * pi) + x_c2;
+            radar[6][i].point.y = R_earth * 0.04 * sqrt(2) / 2 * std::sin((float)i / 10 * pi) + y_c2;
+
+            radar[7][i].point.x = -R_earth * 0.04 * sqrt(2) / 2 * std::sin((float)i / 10 * pi) + x_c2;
+            radar[7][i].point.y = R_earth * 0.04 * sqrt(2) / 2 * std::sin((float)i / 10 * pi) + y_c2;
+        }
+    }
+    GraphPoint* radar[8]; //!!!!!!!RAAAAAADAAAAAAAAAAAR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     GraphPoint* earth;
     float k_zoom;
     vector<Triplet<int>> sat_color;

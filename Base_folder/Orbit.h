@@ -166,12 +166,12 @@ public:
             //cout << "Began with polar plot" << endl;
             for (size_t i = 1; i < polar_length; i++) {
                 //cout << "Iteration started" << endl;
-                if (polar[i].mask) {
-                    if(polar[i - 1].mask)
+                //if (polar[i].mask) {
+                //    if(polar[i - 1].mask)
                         LineTo(hdc, (int)polar[i].point.x, (int)polar[i].point.y);
-                    else
-                        MoveToEx(hdc, (int)polar[i].point.x, (int)polar[i].point.y, NULL);
-                }
+                //    else
+                //        MoveToEx(hdc, (int)polar[i].point.x, (int)polar[i].point.y, NULL);
+                //}
                 //cout << "Iteration finished" << endl;
             }
             SelectObject(hdc, hOldPen);

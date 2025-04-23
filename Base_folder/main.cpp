@@ -113,7 +113,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     if (!RegisterClass(&wc)) {
-        MessageBox(NULL, L"Ошибка регистрации класса окна!", L"Ошибка", MB_ICONERROR);
+        //MessageBox(NULL, L"Ошибка регистрации класса окна!", L"Ошибка", MB_ICONERROR);
         return 1;
     }
     HWND hWnd = CreateWindow(
@@ -124,7 +124,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         NULL, NULL, hInstance, NULL
     );
     if (!hWnd) {
-        MessageBox(NULL, L"Ошибка создания окна!", L"Ошибка", MB_ICONERROR);
+        //MessageBox(NULL, L"Ошибка создания окна!", L"Ошибка", MB_ICONERROR);
         return 1;
     }
 
