@@ -9,9 +9,9 @@
 #include "sgp4/Observer.h"
 #include "sgp4/CoordTopocentric.h"
 
-/**
-  * This class stores trajectory of a satellite in space and over sky.
-  */
+  /**
+    * This class stores trajectory of a satellite in space and over sky.
+    */
 class Orbit : public PointsCloud {
 public:
     Orbit(const libsgp4::SGP4& sat_) : PointsCloud(), sat(sat_) {
@@ -31,7 +31,7 @@ public:
         polar_t = nullptr;
         polar_length = 0;
     }
-    Orbit(const Orbit& o): sat(o.sat) {
+    Orbit(const Orbit& o) : sat(o.sat) {
         cout << "Clone constructor is called" << endl;
         N = o.get_length();
         polar_length = o.get_polar_length();
@@ -59,11 +59,11 @@ public:
 
     Orbit& operator= (const Orbit& o) {
         cout << "Custom assignment operator is called" << endl;
-        if(points != nullptr)
+        if (points != nullptr)
             delete[] points;
-        if(r3 != nullptr)
+        if (r3 != nullptr)
             delete[] r3;
-        if(polar != nullptr) {
+        if (polar != nullptr) {
             delete[] polar;
             delete[] polar_t;
         }
@@ -104,13 +104,13 @@ public:
         cout << "Time, it needs time: " << ts.TotalMinutes() << " " << timeStep << endl;
         polar_length = (int)ts.TotalMinutes() / timeStep;
         cout << "polar_length = " << polar_length << endl;
-        if(polar != nullptr) {
+        if (polar != nullptr) {
             delete[] polar;
             delete[] polar_t;
         }
         polar = new GraphPoint[polar_length];
         polar_t = new libsgp4::DateTime[polar_length];
-        for (int  i = 0; i < polar_length; i++) {
+        for (int i = 0; i < polar_length; i++) {
             libsgp4::DateTime time = timeStart + libsgp4::TimeSpan(0, 0, timeStep * 60 * i);
             libsgp4::Eci sat_at = sat.FindPosition(time);
             libsgp4::CoordTopocentric sat_angles = obs.GetLookAngle(sat_at);
@@ -142,14 +142,14 @@ public:
             MoveToEx(hdc, (int)points[0].point.x, (int)points[0].point.y, NULL);
             for (size_t i = 1; i < N; i++) {
                 if (points[i].mask) {
-                    if(points[i - 1].mask && points[i].point.x < x_border && points[i - 1].point.x < x_border)
+                    if (points[i - 1].mask && points[i].point.x < x_border && points[i - 1].point.x < x_border)
                         LineTo(hdc, (int)points[i].point.x, (int)points[i].point.y);
                     else
                         MoveToEx(hdc, (int)points[i].point.x, (int)points[i].point.y, NULL);
                 }
             }
             if (points[0].mask) {
-                if(points[N - 1].mask && points[0].point.x < x_border && points[N - 1].point.x < x_border)
+                if (points[N - 1].mask && points[0].point.x < x_border && points[N - 1].point.x < x_border)
                     LineTo(hdc, (int)points[0].point.x, (int)points[0].point.y);
                 else
                     MoveToEx(hdc, (int)points[0].point.x, (int)points[0].point.y, NULL);
@@ -166,12 +166,12 @@ public:
             //cout << "Began with polar plot" << endl;
             for (size_t i = 1; i < polar_length; i++) {
                 //cout << "Iteration started" << endl;
-                //if (polar[i].mask) {
-                //    if(polar[i - 1].mask)
+                if (polar[i].mask) {
+                    if(polar[i - 1].mask)
                         LineTo(hdc, (int)polar[i].point.x, (int)polar[i].point.y);
-                //    else
-                //        MoveToEx(hdc, (int)polar[i].point.x, (int)polar[i].point.y, NULL);
-                //}
+                    else
+                        MoveToEx(hdc, (int)polar[i].point.x, (int)polar[i].point.y, NULL);
+                }
                 //cout << "Iteration finished" << endl;
             }
             SelectObject(hdc, hOldPen);

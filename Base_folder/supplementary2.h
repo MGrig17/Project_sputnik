@@ -1,4 +1,4 @@
-/**
+п»ї/**
   * Terminology:
   * "Physical point" -- a point located in 3-dimensional virtual space, which coordinates are stored in km units
   * "Graphical point" -- a point located in 2-dimensional space which corresponds to graphical window. GP coordinates are stored in px units (variables of integer-like type)
@@ -17,7 +17,7 @@ std::string WideToUTF8(const wchar_t* wideStr) {
     WideCharToMultiByte(CP_UTF8, 0, wideStr, inputLen, &utf8Str[0], size, nullptr, nullptr);
     return utf8Str;
 }
-void CreateAndRedirectConsole() { // это мне для создания консольки
+void CreateAndRedirectConsole() { // пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     AllocConsole();
 
     FILE* fDummy;
@@ -36,7 +36,7 @@ void CreateAndRedirectConsole() { // это мне для создания консольки
 void ResizeWindowTo90Percent(HWND hWnd) {
     RECT workArea;
     SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
-    int width = (workArea.right - workArea.left); // - вместо 90% можно сделать любое другое кол-во процентов
+    int width = (workArea.right - workArea.left); // - пїЅпїЅпїЅпїЅпїЅпїЅ 90% пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ-пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     int height = (workArea.bottom - workArea.top);
     int x = workArea.left + (workArea.right - workArea.left - width) / 2;
     int y = workArea.top + (workArea.bottom - workArea.top - height) / 2;

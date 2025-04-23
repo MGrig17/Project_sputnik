@@ -9,9 +9,9 @@
 #include <vector>
 
 #define pi 3.14159265f
-/**
- * This structure holds position and mask of a graphical point
- */
+  /**
+   * This structure holds position and mask of a graphical point
+   */
 struct GraphPoint {
     POINT point;        /// Coordinates
     bool mask;          /// This mask defines whether the point should be drawn (in this project its value is based on whether the point is hidden behind the Earth globe)

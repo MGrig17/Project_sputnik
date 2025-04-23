@@ -8,27 +8,53 @@
 #include "PointsCloud.h"
 #include "Orbit.h"
 #include "sgp4/Observer.h"
+#include <sstream>
+
 
 #define x_c1 400
 #define y_c1 350
-#define x_c2 1100
+#define x_c2 1000
 #define y_c2 350
+extern HWND hTextLine3;
+LPCWSTR StringToLPCWSTR(const std::string& str) {
+    int size_needed = MultiByteToWideChar(
+        CP_UTF8,            // Кодировка исходной строки (UTF-8)
+        0,                  // Флаги (обычно 0)
+        str.c_str(),        // Исходная строка
+        (int)str.size(),   // Длина строки
+        nullptr,           // Не нужен буфер (только расчёт размера)
+        0                  // Размер буфера (пока 0)
+    );
 
-/**
-  * This class stores all data related to the satellite tracking and visualisation
-  */
+    if (size_needed == 0) {
+        return L""; // Ошибка конвертации
+    }
+    wchar_t* wideStr = new wchar_t[size_needed + 1];
+    MultiByteToWideChar(
+        CP_UTF8, 0,
+        str.c_str(), (int)str.size(),
+        wideStr, size_needed
+    );
+
+    wideStr[size_needed] = L'\0'; // Добавляем нулевой символ
+
+    return wideStr; // Возвращаем указатель (не забыть освободить память!)
+}
+  /**
+    * This class stores all data related to the satellite tracking and visualisation
+    */
 class Simulation {
 public:
-    Simulation(): observatory(55.92933, 37.52252, 0.197) { // Those are MIPT dormitory #3 geodetic coordinates: latitude, longitude and altitude respectively
+    Simulation() : observatory(55.92933, 37.52252, 0.197) { // Those are MIPT dormitory #3 geodetic coordinates: latitude, longitude and altitude respectively
         k_zoom = 0.02;
         earth = new GraphPoint[100];
-        for(int i = 0; i < 8; i++)
+        for (int i = 0; i < 8; i++)
             radar[i] = new GraphPoint[20];
         surface = new PointsCloud[7];
-        float c[3] = {0, 0, 0};
-        float v[3] = {0, 0, R_earth};
-        for(int i = 0; i < 4; i++) {
-            float u[3] = {R_earth * std::sin(pi / 4 * i), R_earth * std::cos(pi / 4 * i), 0};
+        float c[3] = { 0, 0, 0 };
+        float v[3] = { 0, 0, R_earth };
+        for (int i = 0; i < 4; i++) {
+            float u[3] = { R_earth * std::sin(pi / 4 * i), R_earth * std::cos(pi / 4 * i), 0 };
             Triplet<float>* new_ellipse = ellipse(c, u, v, 30);
             surface[i].set_r3(new_ellipse, 30);
         }
@@ -63,23 +89,23 @@ public:
         new_ellipse = ellipse(c, u, v, 30);
         surface[6].set_r3(new_ellipse, 30);
 
-        highlightedLoc = {-1, -1};
+        highlightedLoc = { -1, -1 };
 
         The_Radar();
 
         updateEarth();
 
     }
-    Simulation(const float& k_zoom_): observatory(55.92933, 37.52252, 0.197) { // Those are MIPT dormitory #3 geodetic coordinates: latitude, longitude and altitude respectively
+    Simulation(const float& k_zoom_) : observatory(55.92933, 37.52252, 0.197) { // Those are MIPT dormitory #3 geodetic coordinates: latitude, longitude and altitude respectively
         k_zoom = k_zoom_;
-        for(int i = 0; i < 8; i++)
+        for (int i = 0; i < 8; i++)
             radar[i] = new GraphPoint[20];
         earth = new GraphPoint[100];
         surface = new PointsCloud[7];
-        float c[3] = {0, 0, 0};
-        float v[3] = {0, 0, R_earth};
-        for(int i = 0; i < 4; i++) {
-            float u[3] = {R_earth * std::sin(pi / 4 * i), R_earth * std::cos(pi / 4 * i), 0};
+        float c[3] = { 0, 0, 0 };
+        float v[3] = { 0, 0, R_earth };
+        for (int i = 0; i < 4; i++) {
+            float u[3] = { R_earth * std::sin(pi / 4 * i), R_earth * std::cos(pi / 4 * i), 0 };
             Triplet<float>* new_ellipse = ellipse(c, u, v, 30);
             surface[i].set_r3(new_ellipse, 30);
         }
@@ -114,7 +140,7 @@ public:
         new_ellipse = ellipse(c, u, v, 30);
         surface[6].set_r3(new_ellipse, 30);
 
-        highlightedLoc = {-1, -1};
+        highlightedLoc = { -1, -1 };
 
         The_Radar();
 
@@ -130,7 +156,7 @@ public:
             const float end_time = minutes_in_day / tle.MeanMotion();
             float time_step = timeStep;
             //cout << time_step << "!" << endl;
-            if(time_step == -1 || time_step == NULL) {
+            if (time_step == -1 || time_step == NULL) {
                 //cout << "Yeet!" << endl;
                 time_step = end_time / 100;
             }
@@ -159,7 +185,7 @@ public:
             }
             delete[] r;
         }
-        catch(const libsgp4::TleException& e) {
+        catch (const libsgp4::TleException& e) {
             cout << "Failed to create TLE with given params" << endl;
         }
     }
@@ -172,7 +198,7 @@ public:
         int res = 0;
         HPEN hPen = CreatePen(PS_SOLID, 2, RGB(139, 139, 139));
         HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
-        for (size_t j = 1; j<8; j++) {
+        for (size_t j = 1; j < 8; j++) {
             MoveToEx(hdc, radar[j][0].point.x, radar[j][0].point.y, NULL);
             for (size_t i = 1; i < 20; i++) {
                 LineTo(hdc, radar[j][i].point.x, radar[j][i].point.y);
@@ -196,12 +222,12 @@ public:
         hOldPen = (HPEN)SelectObject(hdc, hPen);
         MoveToEx(hdc, earth[0].point.x, earth[0].point.y, NULL);
         for (size_t i = 1; i < 100; i++) {
-            if(earth[i].point.x < x_border && earth[i - 1].point.x < x_border)
+            if (earth[i].point.x < x_border && earth[i - 1].point.x < x_border)
                 LineTo(hdc, earth[i].point.x, earth[i].point.y);
             else
                 MoveToEx(hdc, earth[i].point.x, earth[i].point.y, NULL);
         }
-        if(earth[0].point.x < x_border && earth[99].point.x < x_border)
+        if (earth[0].point.x < x_border && earth[99].point.x < x_border)
             LineTo(hdc, earth[0].point.x, earth[0].point.y);
         SelectObject(hdc, hOldPen);
         DeleteObject(hPen);
@@ -209,13 +235,13 @@ public:
         hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
         hOldPen = (HPEN)SelectObject(hdc, hPen);
         //cout << "Earth redrawn" << endl;
-        if(highlightedLoc.x != -1) {
-            MoveToEx(hdc, (int) highlightedLoc.x - 10, (int) highlightedLoc.y, (LPPOINT) NULL);
-            LineTo(hdc, (int) highlightedLoc.x + 10, (int) highlightedLoc.y);
-            MoveToEx(hdc, (int) highlightedLoc.x, (int) highlightedLoc.y - 10, (LPPOINT) NULL);
-            LineTo(hdc, (int) highlightedLoc.x, (int) highlightedLoc.y + 10);
+        if (highlightedLoc.x != -1) {
+            MoveToEx(hdc, (int)highlightedLoc.x - 10, (int)highlightedLoc.y, (LPPOINT)NULL);
+            LineTo(hdc, (int)highlightedLoc.x + 10, (int)highlightedLoc.y);
+            MoveToEx(hdc, (int)highlightedLoc.x, (int)highlightedLoc.y - 10, (LPPOINT)NULL);
+            LineTo(hdc, (int)highlightedLoc.x, (int)highlightedLoc.y + 10);
         }
-        if(k_zoom > 0.5) {
+        if (k_zoom > 0.5) {
             MoveToEx(hdc, x_c1 + 5, y_c1, NULL);
             LineTo(hdc, x_c1 + 20, y_c1);
             MoveToEx(hdc, x_c1 - 5, y_c1, NULL);
@@ -245,7 +271,7 @@ public:
         }
         SelectObject(hdc, hOldPen);
         DeleteObject(hPen);
-        for (int  i = 0; i < 7; i++) {
+        for (int i = 0; i < 7; i++) {
             res += surface[i].draw(hdc, 0, 0, 0);
         }
         //cout << "Earth surface redrawn" << endl;
@@ -262,12 +288,12 @@ public:
         for (int i = 0; i < satellites.size(); i++) {
             satellites[i].projectCloud(R_earth * k_zoom, n, k_zoom, x_c1, y_c1);
         }
-        for (int  i = 0; i < 7; i++) {
+        for (int i = 0; i < 7; i++) {
             surface[i].projectCloud(R_earth * k_zoom, n, k_zoom, x_c1, y_c1);
         }
     }
     void scroll(const float& dk_zoom, const float* n) {
-        if(k_zoom > -dk_zoom) {
+        if (k_zoom > -dk_zoom) {
             k_zoom += dk_zoom;
             updateEarth();
             updateGraph3D(n);
@@ -277,10 +303,22 @@ public:
         bool foundPoint = false;
         highlightedLoc.x = -1;
         highlightedLoc.y = -1;
-        for(int i = 0; i < satellites.size(); i++) {
-            for(int j = 0; j < satellites[i].get_polar_length(); j++) {
-                if(satellites[i].get_polar()[j].mask && std::sqrt((satellites[i].get_polar()[j].point.x - mousePos.x) * (satellites[i].get_polar()[j].point.x - mousePos.x) + (satellites[i].get_polar()[j].point.y - mousePos.y) * (satellites[i].get_polar()[j].point.y - mousePos.y)) < 25) {
-                    cout << satellites[i].get_polar_t()[j] << endl;
+        for (int i = 0; i < satellites.size(); i++) {
+            for (int j = 0; j < satellites[i].get_polar_length(); j++) {
+                if (satellites[i].get_polar()[j].mask && std::sqrt((satellites[i].get_polar()[j].point.x - mousePos.x) * (satellites[i].get_polar()[j].point.x - mousePos.x) + (satellites[i].get_polar()[j].point.y - mousePos.y) * (satellites[i].get_polar()[j].point.y - mousePos.y)) < 25) {
+                    //cout << satellites[i].get_polar_t()[j] << endl;
+                    //std::cout << typeid(satellites[i].get_polar_t()[j]).name() << std::endl;
+                    std::ostringstream oss;
+                    oss << std::setfill('0')
+                        << std::setw(4) << satellites[i].get_polar_t()[j].Year() << "-"
+                        << std::setw(2) << satellites[i].get_polar_t()[j].Month() << "-"
+                        << std::setw(2) << satellites[i].get_polar_t()[j].Day() << " "
+                        << std::setw(2) << satellites[i].get_polar_t()[j].Hour() << ":"
+                        << std::setw(2) << satellites[i].get_polar_t()[j].Minute() << ":"
+                        << std::setw(2) << satellites[i].get_polar_t()[j].Second();
+                    std::string VREMIA = oss.str();
+                    //cout << str << endl;
+                    SetWindowTextW(hTextLine3, StringToLPCWSTR(VREMIA));
                     foundPoint = true;
                     highlightedLoc = satellites[i].get_polar()[j].point;
                     break;
@@ -288,7 +326,7 @@ public:
                 //cout << i << " " << j << endl;
                 //cout << satellites[i].get_polar()[j].point.x << " " << satellites[i].get_polar()[j].point.y << endl;
             }
-            if(foundPoint)
+            if (foundPoint)
                 break;
         }
     }
@@ -304,8 +342,8 @@ private:
     }
     void The_Radar() {
         for (int i = 0; i < 20; i++) {
-            radar[0][i].point.x = R_earth * 0.04 * std::sin((float)i / 10 * pi) +  x_c2;
-            radar[0][i].point.y = R_earth * 0.04 * std::cos((float)i / 10 * pi) +  y_c2;
+            radar[0][i].point.x = R_earth * 0.04 * std::sin((float)i / 10 * pi) + x_c2;
+            radar[0][i].point.y = R_earth * 0.04 * std::cos((float)i / 10 * pi) + y_c2;
 
             radar[1][i].point.x = R_earth * 0.032 * std::sin((float)i / 10 * pi) + x_c2;
             radar[1][i].point.y = R_earth * 0.032 * std::cos((float)i / 10 * pi) + y_c2;

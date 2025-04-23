@@ -1,4 +1,4 @@
-/**
+п»ї/**
   * Terminology:
   * "Physical point" -- a point located in 3-dimensional virtual space, which coordinates are stored in km units
   * "Graphical point" -- a point located in 2-dimensional space which corresponds to graphical window. GP coordinates are stored in px units (variables of integer-like type)
@@ -11,7 +11,7 @@
 #include <iostream>
 #include <filesystem>
 
-/// WinAPI widget IDs:
+  /// WinAPI widget IDs:
 #define IDC_MYBUTTON 101            /// 'Create satellite' button
 #define IDC_Name_satellite 102      /// 'Name' text field
 #define IDC_EDITBOX1 103            /// TLE line 1 text field
@@ -43,13 +43,14 @@ extern HWND StepStep;               /// 'Timestep' text field (look 'Simulation.
 /// Text labels meant to describe input fields:
 extern HWND hTextLine1;             /// To 'hEdit1'
 extern HWND hTextLine2;             /// To 'hEdit2'
+extern HWND hTextLine3;
 extern HWND hTextTimeStep;          /// To 'StepStep'
 extern HWND hTextColor;             /// To 'hEditColor1..3'
 extern const int CONTROL_HEIGHT;    /// Bottom panel height
 
 extern Simulation sim;              /// Graphics space contents
 
-// и ничего вы мне не сделаете
+// пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 extern std::string name;            /// Secondary buffer for 'hEdit3'
 extern std::string line1;           /// Secondary buffer for 'hEdit1'
 extern std::string line2;           /// Secondary buffer for 'hEdit2'
@@ -58,10 +59,10 @@ extern bool isDragging;             /// Whether left mouse button is pressed
 bool gotTLE = false;                /// Whether TLE is stored in buffers
 extern POINT lastMousePos;
 const float dk_zoom = 0.00005;      /// Change of 'k_zoom' bound to mousewheel being scrolled on 1 unit
-int k1 = 875; // x-позиция первого
-int k2 = 80; // ширина ячейки
-int k3 = 30; // высота ячейки комбо-бокс для цвета
-int color_R=255, color_G=0, color_B=0;
+int k1 = 875; // x-пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+int k2 = 80; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+int k3 = 30; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ-пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+int color_R = 255, color_G = 0, color_B = 0;
 
 namespace fs = std::filesystem;
 
@@ -80,7 +81,7 @@ std::string find_file_by_prefix(const std::string& directory_path, char prefix_c
     }
     /*
     if (found_file.empty()) {
-        throw std::runtime_error("Файл с указанным префиксом не найден!");
+        throw std::runtime_error("пїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ!");
     }
     */
     return found_file;
@@ -98,8 +99,8 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 std::string text1 = WideToUTF8(buffer);
                 char str = text1[0];
 
-                std::string search_directory = "H:\\Documents\\MIPT\\C++\\WinAPI\\Base_satellites\\";
-                std::string files=find_file_by_prefix(search_directory, str);
+                std::string search_directory = "Base_satellite\\";
+                std::string files = find_file_by_prefix(search_directory, str);
                 files = search_directory + files;
                 std::cout << files << std::endl;
                 //std::ifstream file("C:/Users/User/OneDrive/Desktop/Base_satellite/F.txt");
@@ -109,7 +110,7 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                     string sLine;
                     getline(file, sLine);
                     int t = sLine.length();
-                    while (sLine[t-1] == ' ') {
+                    while (sLine[t - 1] == ' ') {
                         t -= 1;
                     }
                     sLine = sLine.substr(0, t);
@@ -121,7 +122,7 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                         }
                         sLine = sLine.substr(0, t);
                     }
-                    std::cout << sLine << std::endl; //Нашёл с таким названием
+                    std::cout << sLine << std::endl; //пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                     //string nextLine1, nextLine2;
                     getline(file, line1);
                     getline(file, line2);
@@ -131,14 +132,14 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                         while (t > 0 && nextLine1[t - 1] == ' ') t--;
                         nextLine1 = nextLine1.substr(0, t);
 
-                        std::cout << "Следующая строка 1: " << nextLine1 << std::endl;
+                        std::cout << "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ 1: " << nextLine1 << std::endl;
 
                         if (getline(file, nextLine2)) {
                             t = nextLine2.length();
                             while (t > 0 && nextLine2[t - 1] == ' ') t--;
                             nextLine2 = nextLine2.substr(0, t);
 
-                            std::cout << "Следующая строка 2: " << nextLine2 << std::endl;
+                            std::cout << "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ 2: " << nextLine2 << std::endl;
                         }
                     }*/
                 }
@@ -159,7 +160,7 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 wchar_t buffer4[256]; // TimeStep
                 GetDlgItemTextW(hWnd, IDC_TIMESTEP, buffer4, 256);
                 name = name_satellite;
-                if(!gotTLE) {
+                if (!gotTLE) {
                     line1 = text1;
                     line2 = text2;
                 }
@@ -224,6 +225,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         hTextLine2 = CreateWindowW(L"STATIC", L"ENTER TLE Line 2",
             WS_CHILD | WS_VISIBLE | SS_LEFT,
             12, 55,
+            200, 15,
+            hPanel,
+            NULL, hInst, NULL);
+        hTextLine3 = CreateWindowW(L"STATIC", L"РЎР°Р±Р°РєР° СЃСѓС‚СѓР»Р°СЏ",
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
+            1150, 55,
             200, 15,
             hPanel,
             NULL, hInst, NULL);
