@@ -1,0 +1,203 @@
+# depslib dependency file v1.0
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\coordgeodetic.cc
+	"CoordGeodetic.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\coordgeodetic.h
+	"Util.h"
+	<string>
+	<sstream>
+	<iomanip>
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\util.h
+	"Globals.h"
+	<sstream>
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\globals.h
+	<cmath>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\coordtopocentric.cc
+	"CoordTopocentric.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\coordtopocentric.h
+	"Util.h"
+	<string>
+	<sstream>
+	<iomanip>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\datetime.cc
+	"DateTime.h"
+
+1745337017 h:\documents\mipt\c++\winapi_final\sgp4\datetime.h
+	<iomanip>
+	<iostream>
+	<sstream>
+	<chrono>
+	<algorithm>
+	<cassert>
+	"TimeSpan.h"
+	"Util.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\timespan.h
+	<iostream>
+	<sstream>
+	<iomanip>
+	<cmath>
+	<cstdint>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\decayedexception.cc
+	"DecayedException.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\decayedexception.h
+	"DateTime.h"
+	"Vector.h"
+	<stdexcept>
+	<string>
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\vector.h
+	<cmath>
+	<string>
+	<sstream>
+	<iomanip>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\eci.cc
+	"Eci.h"
+	"Globals.h"
+	"Util.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\eci.h
+	"CoordGeodetic.h"
+	"Vector.h"
+	"DateTime.h"
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\globals.cc
+	"Globals.h"
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\observer.cc
+	"Observer.h"
+	"CoordTopocentric.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\observer.h
+	"CoordGeodetic.h"
+	"Eci.h"
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\orbitalelements.cc
+	"OrbitalElements.h"
+	"Tle.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\orbitalelements.h
+	"Util.h"
+	"DateTime.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\tle.h
+	"Util.h"
+	"DateTime.h"
+	"TleException.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\tleexception.h
+	<stdexcept>
+	<string>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\satelliteexception.cc
+	"SatelliteException.h"
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\satelliteexception.h
+	<stdexcept>
+	<string>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\sgp4.cc
+	"SGP4.h"
+	"Util.h"
+	"Vector.h"
+	"SatelliteException.h"
+	"DecayedException.h"
+	<cmath>
+	<iomanip>
+	<cstring>
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\sgp4.h
+	"Tle.h"
+	"OrbitalElements.h"
+	"Eci.h"
+	"SatelliteException.h"
+	"DecayedException.h"
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\solarposition.cc
+	"SolarPosition.h"
+	"Globals.h"
+	"Util.h"
+	<cmath>
+
+1733229141 h:\documents\mipt\c++\winapi_final\sgp4\solarposition.h
+	"DateTime.h"
+	"Eci.h"
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\timespan.cc
+	"TimeSpan.h"
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\tle.cc
+	"Tle.h"
+	<locale>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\tleexception.cc
+	"TleException.h"
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\util.cc
+	"Util.h"
+	<algorithm>
+	<locale>
+	<functional>
+
+1733229141 source:h:\documents\mipt\c++\winapi_final\sgp4\vector.cc
+	"Vector.h"
+
+1745434311 source:h:\documents\mipt\c++\winapi_final\main.cpp
+	<windows.h>
+	<vector>
+	<cmath>
+	<string>
+	<iostream>
+	<fstream>
+	<stdio.h>
+	<io.h>
+	<fcntl.h>
+	<commctrl.h>
+	"Simulation.h"
+	"Callbacks.h"
+
+1745434585 h:\documents\mipt\c++\winapi_final\simulation.h
+	"PointsCloud.h"
+	"Orbit.h"
+	"sgp4/Observer.h"
+	<sstream>
+
+1745337057 h:\documents\mipt\c++\winapi_final\pointscloud.h
+	"supplementary.h"
+	<vector>
+	<string>
+	<iostream>
+	"sgp4/SGP4.h"
+	"sgp4/Tle.h"
+	"sgp4/Util.h"
+	"sgp4/Vector.h"
+	"sgp4/Globals.h"
+	"sgp4/DateTime.h"
+	"sgp4/TimeSpan.h"
+
+1745434311 h:\documents\mipt\c++\winapi_final\supplementary.h
+	<windows.h>
+	<vector>
+
+1745429593 h:\documents\mipt\c++\winapi_final\orbit.h
+	"PointsCloud.h"
+	"sgp4/Observer.h"
+	"sgp4/CoordTopocentric.h"
+
+1745434801 h:\documents\mipt\c++\winapi_final\callbacks.h
+	<string>
+	"supplementary2.h"
+	<fstream>
+	<iostream>
+	<filesystem>
+
+1745327983 h:\documents\mipt\c++\winapi_final\supplementary2.h
+
