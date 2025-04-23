@@ -17,8 +17,8 @@
 #include "sgp4/DateTime.h"
 #include "sgp4/TimeSpan.h"
 
-#define R_earth 6400        ///Earth radius, km
-#define x_border 750        ///Borderline pixel after which near-Earth space visualisation is not to be displayed
+#define R_earth 6400        /// Earth radius, km
+#define x_border 750        /// Borderline pixel after which near-Earth space visualisation is not to be displayed
 
 using namespace std;
 

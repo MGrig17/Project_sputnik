@@ -1,4 +1,3 @@
-п»ї#pragma once
 /**
   * Terminology:
   * "Physical point" -- a point located in 3-dimensional virtual space, which coordinates are stored in km units
@@ -11,54 +10,60 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
-namespace fs = std::filesystem;
 
-#define IDC_MYBUTTON 101 // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
-#define IDC_Name_satellite 102
-#define IDC_EDITBOX1 103
-#define IDC_EDITBOX2 104
-#define IDC_TIMESTEP 105
-#define IDC_COLOR1 106
-#define IDC_COLOR2 107
-#define IDC_COLOR3 108
-#define ID_PANEL 200
-#define IDC_SEARCH_BUTTON 109
+/// WinAPI widget IDs:
+#define IDC_MYBUTTON 101            /// 'Create satellite' button
+#define IDC_Name_satellite 102      /// 'Name' text field
+#define IDC_EDITBOX1 103            /// TLE line 1 text field
+#define IDC_EDITBOX2 104            /// TLE line 2 text field
+#define IDC_TIMESTEP 105            /// 'Timestep' text field
+#define IDC_COLOR1 106              /// Red color component counter
+#define IDC_COLOR2 107              /// Green color component counter
+#define IDC_COLOR3 108              /// Blue color component counter
+#define IDC_SEARCH_BUTTON 110       /// 'Import TLE from database by name'
+#define ID_PANEL 200                /// The bottom panel itself
 
+/// WinAPI widgets as objects:
 extern HINSTANCE hInst;
-extern HWND hPanel;
+extern HWND hPanel;                 /// The bottom panel itself
+extern HWND knopka1;                /// 'Create satellite' button
+extern HWND hEdit3;                 /// 'Name' text field
+extern HWND hEdit1;                 /// TLE line 1 text field
+extern HWND hEdit2;                 /// TLE line 2 text field
+extern HWND hEditColor1;            /// Red color component counter
+extern HWND hEditColor2;            /// Green color component counter
+extern HWND hEditColor3;            /// Blue color component counter
+extern HWND hUpDown1;               /// Arrows bound to the red color counter
+extern HWND hUpDown2;               /// Arrows bound to the green color counter
+extern HWND hUpDown3;               /// Arrows bound to the blue color counter
+extern HWND hButton;                /// 'Import TLE from database by name'
+extern float timeStep;              /// Secondary buffer for the following text field
+extern HWND StepStep;               /// 'Timestep' text field (look 'Simulation.h' for further explanation)
 
-extern HWND knopka1;
-extern HWND hEdit3;
-extern HWND hEdit1; 
-extern HWND hEdit2;
-extern HWND hEditColor1; 
-extern HWND hEditColor2;
-extern HWND hEditColor3;
-extern HWND hUpDown1;
-extern HWND hUpDown2;
-extern HWND hUpDown3;
-extern HWND hButton;        //!!!!!!!!!!!/////////////////////////////////////
-extern float timeStep;
-extern HWND StepStep;
-//пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-extern HWND hTextLine1;
-extern HWND hTextLine2;
-extern HWND hTextTimeStep;
-extern HWND hTextColor;
-extern const int CONTROL_HEIGHT; 
-extern Simulation sim;
+/// Text labels meant to describe input fields:
+extern HWND hTextLine1;             /// To 'hEdit1'
+extern HWND hTextLine2;             /// To 'hEdit2'
+extern HWND hTextTimeStep;          /// To 'StepStep'
+extern HWND hTextColor;             /// To 'hEditColor1..3'
+extern const int CONTROL_HEIGHT;    /// Bottom panel height
 
-extern std::string name;
-extern std::string line1;
-extern std::string line2;
-extern float n[3];
-extern bool isDragging;
+extern Simulation sim;              /// Graphics space contents
+
+// и ничего вы мне не сделаете
+extern std::string name;            /// Secondary buffer for 'hEdit3'
+extern std::string line1;           /// Secondary buffer for 'hEdit1'
+extern std::string line2;           /// Secondary buffer for 'hEdit2'
+extern float n[3];                  /// Vector normal to the monitor plane
+extern bool isDragging;             /// Whether left mouse button is pressed
+bool gotTLE = false;                /// Whether TLE is stored in buffers
 extern POINT lastMousePos;
-const float dk_zoom = 0.00005; 
-int k1 = 875; // x-пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
-int k2 = 80; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-int k3 = 30; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ-пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
-int color_R = 255, color_G = 0, color_B = 0;
+const float dk_zoom = 0.00005;      /// Change of 'k_zoom' bound to mousewheel being scrolled on 1 unit
+int k1 = 875; // x-позиция первого
+int k2 = 80; // ширина ячейки
+int k3 = 30; // высота ячейки комбо-бокс для цвета
+int color_R=255, color_G=0, color_B=0;
+
+namespace fs = std::filesystem;
 
 std::string find_file_by_prefix(const std::string& directory_path, char prefix_char) {
     std::string found_file;
@@ -67,7 +72,7 @@ std::string find_file_by_prefix(const std::string& directory_path, char prefix_c
             std::string filename = entry.path().filename().string();
             if (!filename.empty() && (toupper(filename[0]) == toupper(prefix_char))) {
                 if (!found_file.empty()) {
-                    throw std::runtime_error("РќР°Р№РґРµРЅРѕ Р±РѕР»РµРµ РѕРґРЅРѕРіРѕ С„Р°Р№Р»Р° СЃ СѓРєР°Р·Р°РЅРЅС‹Рј РїСЂРµС„РёРєСЃРѕРј!");
+                    throw std::runtime_error("Found more than one file with mentioned prefix!");
                 }
                 found_file = filename;
             }
@@ -75,7 +80,7 @@ std::string find_file_by_prefix(const std::string& directory_path, char prefix_c
     }
     /*
     if (found_file.empty()) {
-        throw std::runtime_error("Р¤Р°Р№Р» СЃ СѓРєР°Р·Р°РЅРЅС‹Рј РїСЂРµС„РёРєСЃРѕРј РЅРµ РЅР°Р№РґРµРЅ!");
+        throw std::runtime_error("Файл с указанным префиксом не найден!");
     }
     */
     return found_file;
@@ -93,7 +98,7 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 std::string text1 = WideToUTF8(buffer);
                 char str = text1[0];
 
-                std::string search_directory = "C:/Users/User/OneDrive/Desktop/Base_satellite/";
+                std::string search_directory = "H:\\Documents\\MIPT\\C++\\WinAPI\\Base_satellites\\";
                 std::string files=find_file_by_prefix(search_directory, str);
                 files = search_directory + files;
                 std::cout << files << std::endl;
@@ -116,23 +121,24 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                         }
                         sLine = sLine.substr(0, t);
                     }
-                    std::cout << sLine << std::endl; //РќР°С€С‘Р» СЃ С‚Р°РєРёРј РЅР°Р·РІР°РЅРёРµРј
+                    std::cout << sLine << std::endl; //Нашёл с таким названием
                     //string nextLine1, nextLine2;
                     getline(file, line1);
                     getline(file, line2);
+                    gotTLE = true;
                     /*if (getline(file, nextLine1)) {
                         t = nextLine1.length();
                         while (t > 0 && nextLine1[t - 1] == ' ') t--;
                         nextLine1 = nextLine1.substr(0, t);
 
-                        std::cout << "РЎР»РµРґСѓСЋС‰Р°СЏ СЃС‚СЂРѕРєР° 1: " << nextLine1 << std::endl;
+                        std::cout << "Следующая строка 1: " << nextLine1 << std::endl;
 
                         if (getline(file, nextLine2)) {
                             t = nextLine2.length();
                             while (t > 0 && nextLine2[t - 1] == ' ') t--;
                             nextLine2 = nextLine2.substr(0, t);
 
-                            std::cout << "РЎР»РµРґСѓСЋС‰Р°СЏ СЃС‚СЂРѕРєР° 2: " << nextLine2 << std::endl;
+                            std::cout << "Следующая строка 2: " << nextLine2 << std::endl;
                         }
                     }*/
                 }
@@ -153,8 +159,11 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 wchar_t buffer4[256]; // TimeStep
                 GetDlgItemTextW(hWnd, IDC_TIMESTEP, buffer4, 256);
                 name = name_satellite;
-                //line1 = text1;
-                //line2 = text2;
+                if(!gotTLE) {
+                    line1 = text1;
+                    line2 = text2;
+                }
+                gotTLE = true;
                 //line1 = "1 19596U 88095A   25110.87941604 -.00000352  00000-0  00000-0 0  9999";
                 //line2 = "2 19596  12.0770 332.9726 0005784 179.7204 140.0282  1.00319827117417";
 
@@ -179,14 +188,13 @@ LRESULT CALLBACK PanelProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 
                 float startTime = 0.0;
                 float endTime = 100.0;
-                timeStep = atof((WideToUTF8(buffer4)).c_str()); //пїЅпїЅпїЅпїЅ 0.1
+                timeStep = atof((WideToUTF8(buffer4)).c_str());
 
                 sim.add_orbit(name, line1, line2, timeStep, color_R, color_G, color_B);
                 sim.updateGraph3D(n);
-                InvalidateRect(hWnd, NULL, TRUE);
+                //InvalidateRect(hWnd, NULL, FALSE);
+                gotTLE = false;
 
-                //MessageBox(GetParent(hWnd), L"пїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ!", L"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ", MB_OK);
-                
                 return TRUE;
             }
 
@@ -209,29 +217,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         );
         hTextLine1 = CreateWindowW(L"STATIC", L"ENTER TLE Line 1",
             WS_CHILD | WS_VISIBLE | SS_LEFT,
-            12, 20,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (x,y) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            200, 15, // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            hPanel,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅ
+            12, 20,
+            200, 15,
+            hPanel,
             NULL, hInst, NULL);
         hTextLine2 = CreateWindowW(L"STATIC", L"ENTER TLE Line 2",
             WS_CHILD | WS_VISIBLE | SS_LEFT,
-            12, 55,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (x,y) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            200, 15, // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            hPanel,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅ
+            12, 55,
+            200, 15,
+            hPanel,
             NULL, hInst, NULL);
         hTextTimeStep = CreateWindowW(L"STATIC", L"STEP",
             WS_CHILD | WS_VISIBLE | SS_LEFT,
-            1000, 15,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (x,y) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            50, 15, // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            hPanel,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅ
+            1000, 15,
+            50, 15,
+            hPanel,
             NULL, hInst, NULL);
         hTextColor = CreateWindowW(L"STATIC", L"COLOR",
             WS_CHILD | WS_VISIBLE | SS_LEFT,
-            820, 55,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (x,y) пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            50, 15, // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            hPanel,  // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅ
+            820, 55,
+            50, 15,
+            hPanel,
             NULL, hInst, NULL);
-        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+
         SetWindowSubclass(hPanel, PanelProc, 0, 0);
         knopka1 = CreateWindow(
             L"BUTTON", L"Create the satellite",
@@ -292,24 +300,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         SendMessage(hUpDown3, UDM_SETRANGE, 0, MAKELPARAM(255, 0));
 
 
-        // пїЅпїЅпїЅпїЅпїЅ TLE
+        // TLE
         hEdit3 = CreateWindow(
             L"EDIT", L"",
             WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
             490, 15, 300, 30,
-            hPanel, (HMENU)IDC_Name_satellite, hInst, NULL //пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+            hPanel, (HMENU)IDC_Name_satellite, hInst, NULL
         );
         hEdit1 = CreateWindow(
             L"EDIT", L"",
             WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
             180, 15, 300, 30,
-            hPanel, (HMENU)IDC_EDITBOX1, hInst, NULL //пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
+            hPanel, (HMENU)IDC_EDITBOX1, hInst, NULL
         );
         hEdit2 = CreateWindow(
             L"EDIT", L"",
             WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
             180, 50, 300, 30,
-            hPanel, (HMENU)IDC_EDITBOX2, hInst, NULL //пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
+            hPanel, (HMENU)IDC_EDITBOX2, hInst, NULL
         );
         ResizeWindowTo90Percent(hWnd);
         break;
@@ -328,7 +336,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         PostQuitMessage(0);
         break;
     case WM_ENTERSIZEMOVE:
-        isDragging = true; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
+        isDragging = true;
         break;
     case WM_LBUTTONDOWN:
         isDragging = true;
@@ -341,10 +349,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         InvalidateRect(hWnd, NULL, TRUE);
         break;
     case WM_MOUSEMOVE: {
+        POINT currentMousePos;
+        currentMousePos.x = LOWORD(lParam);
+        currentMousePos.y = HIWORD(lParam);
         if (isDragging) {
-            POINT currentMousePos;
-            currentMousePos.x = LOWORD(lParam);
-            currentMousePos.y = HIWORD(lParam);
             //cout << currentMousePos.x << " " << currentMousePos.y << endl;
             float dx = lastMousePos.x - currentMousePos.x;
             float dy = lastMousePos.y - currentMousePos.y;
@@ -369,10 +377,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             //TLE processing begin
             sim.updateGraph3D(n);
             //TLE processing end
-            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
-            InvalidateRect(hWnd, NULL, FALSE);
             lastMousePos = currentMousePos;
         }
+        sim.highlight(currentMousePos);
+        InvalidateRect(hWnd, NULL, FALSE);
         break;
     }
 

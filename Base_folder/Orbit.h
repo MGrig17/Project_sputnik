@@ -49,6 +49,7 @@ public:
         for (int i = 0; i < polar_length; i++) {
             polar[i].point = o.get_polar()[i].point;
             polar[i].mask = o.get_polar()[i].mask;
+            polar_t[i] = o.get_polar_t()[i];
         }
         //polar = o.polar;
         //timeStep = o.timeStep;
@@ -82,6 +83,7 @@ public:
         for (int i = 0; i < polar_length; i++) {
             polar[i].point = o.get_polar()[i].point;
             polar[i].mask = o.get_polar()[i].mask;
+            polar_t[i] = o.get_polar_t()[i];
         }
         //polar = o.polar;
         //timeStep = o.timeStep;
@@ -187,6 +189,7 @@ public:
     float get_timeStep() const { return timeStep; }
     int get_polar_length() const { return polar_length; }
     GraphPoint* get_polar() const { return polar; }
+    libsgp4::DateTime* get_polar_t() const { return polar_t; }
     //void set_timeFirst(libsgp4::DateTime timeFirst_) { timeFirst = timeFirst_; }
     //libsgp4::DateTime get_timeFirst() { return timeFirst; }
     ~Orbit() {

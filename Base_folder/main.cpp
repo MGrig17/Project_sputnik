@@ -54,6 +54,7 @@ HWND hTextLine1;
 HWND hTextLine2;
 HWND hTextTimeStep;
 HWND hTextColor;
+HWND hButton;
 const int CONTROL_HEIGHT = 100; // высота дочернего окна
 
 // и ничего вы мне не сделаете

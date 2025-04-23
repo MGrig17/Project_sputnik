@@ -61,6 +61,8 @@ public:
         new_ellipse = ellipse(c, u, v, 30);
         surface[6].set_r3(new_ellipse, 30);
 
+        highlightedLoc = {-1, -1};
+
         updateEarth();
 
     }
@@ -105,6 +107,8 @@ public:
         u[2] = 0;
         new_ellipse = ellipse(c, u, v, 30);
         surface[6].set_r3(new_ellipse, 30);
+
+        highlightedLoc = {-1, -1};
 
         updateEarth();
     }
@@ -151,7 +155,7 @@ public:
         sat_color.pop_back();
     }
     int draw(const HDC& hdc) {
-        cout << "Entered sim.draw" << endl;
+        //cout << "Entered sim.draw" << endl;
         int res = 0;
         HPEN hPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
         HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
@@ -164,21 +168,54 @@ public:
         }
         if(earth[0].point.x < x_border && earth[99].point.x < x_border)
             LineTo(hdc, earth[0].point.x, earth[0].point.y);
-        cout << "Earth redrawn" << endl;
+        //cout << "Earth redrawn" << endl;
+        if(highlightedLoc.x != -1) {
+            MoveToEx(hdc, (int) highlightedLoc.x - 10, (int) highlightedLoc.y, (LPPOINT) NULL);
+            LineTo(hdc, (int) highlightedLoc.x + 10, (int) highlightedLoc.y);
+            MoveToEx(hdc, (int) highlightedLoc.x, (int) highlightedLoc.y - 10, (LPPOINT) NULL);
+            LineTo(hdc, (int) highlightedLoc.x, (int) highlightedLoc.y + 10);
+        }
+        if(k_zoom > 0.5) {
+            MoveToEx(hdc, x_c1 + 5, y_c1, NULL);
+            LineTo(hdc, x_c1 + 20, y_c1);
+            MoveToEx(hdc, x_c1 - 5, y_c1, NULL);
+            LineTo(hdc, x_c1 - 20, y_c1);
+            MoveToEx(hdc, x_c1 + 4, y_c1 + 3, NULL);
+            LineTo(hdc, x_c1 + 16, y_c1 + 12);
+            MoveToEx(hdc, x_c1 - 4, y_c1 + 3, NULL);
+            LineTo(hdc, x_c1 - 16, y_c1 + 12);
+            MoveToEx(hdc, x_c1 + 4, y_c1 - 3, NULL);
+            LineTo(hdc, x_c1 + 16, y_c1 - 12);
+            MoveToEx(hdc, x_c1 - 4, y_c1 - 3, NULL);
+            LineTo(hdc, x_c1 - 16, y_c1 - 12);
+            MoveToEx(hdc, x_c1 + 10, y_c1 - 12, NULL);
+            LineTo(hdc, x_c1 + 7, y_c1 - 16);
+            LineTo(hdc, x_c1 + 4, y_c1 - 12);
+            MoveToEx(hdc, x_c1 - 10, y_c1 - 12, NULL);
+            LineTo(hdc, x_c1 - 7, y_c1 - 16);
+            LineTo(hdc, x_c1 - 4, y_c1 - 12);
+            MoveToEx(hdc, x_c1, y_c1, NULL);
+            LineTo(hdc, x_c1 + 2, y_c1 - 4);
+            LineTo(hdc, x_c1 - 2, y_c1 - 4);
+            LineTo(hdc, x_c1, y_c1);
+            LineTo(hdc, x_c1, y_c1 + 8);
+            LineTo(hdc, x_c1 + 2, y_c1 + 10);
+            MoveToEx(hdc, x_c1, y_c1 + 8, NULL);
+            LineTo(hdc, x_c1 - 2, y_c1 + 10);
+        }
         SelectObject(hdc, hOldPen);
         DeleteObject(hPen);
         for (int  i = 0; i < 7; i++) {
             res += surface[i].draw(hdc, 0, 0, 0);
         }
-        cout << "Earth surface redrawn" << endl;
+        //cout << "Earth surface redrawn" << endl;
         for (int i = 0; i < satellites.size(); i++) {
             res += satellites[i].draw(hdc, sat_color[i].num1, sat_color[i].num2, sat_color[i].num3);
         }
-        /*...*/
         if (res != 0) {
             cerr << "RUNTIME EXCEPTION: Method 'draw' of an object of 'Graph3D' class has malfunctioned " << -res << " times" << endl;
         }
-        cout << "Exited sim.draw" << endl;
+        //cout << "Exited sim.draw" << endl;
         return res;
     }
     void updateGraph3D(const float* n) {
@@ -194,6 +231,25 @@ public:
             k_zoom += dk_zoom;
             updateEarth();
             updateGraph3D(n);
+        }
+    }
+    void highlight(const POINT& mousePos) {
+        bool foundPoint = false;
+        highlightedLoc.x = -1;
+        highlightedLoc.y = -1;
+        for(int i = 0; i < satellites.size(); i++) {
+            for(int j = 0; j < satellites[i].get_polar_length(); j++) {
+                if(satellites[i].get_polar()[j].mask && std::sqrt((satellites[i].get_polar()[j].point.x - mousePos.x) * (satellites[i].get_polar()[j].point.x - mousePos.x) + (satellites[i].get_polar()[j].point.y - mousePos.y) * (satellites[i].get_polar()[j].point.y - mousePos.y)) < 25) {
+                    cout << satellites[i].get_polar_t()[j] << endl;
+                    foundPoint = true;
+                    highlightedLoc = satellites[i].get_polar()[j].point;
+                    break;
+                }
+                //cout << i << " " << j << endl;
+                //cout << satellites[i].get_polar()[j].point.x << " " << satellites[i].get_polar()[j].point.y << endl;
+            }
+            if(foundPoint)
+                break;
         }
     }
 private:
@@ -212,4 +268,5 @@ private:
     vector<Orbit> satellites;
     PointsCloud* surface;
     libsgp4::Observer observatory;
+    POINT highlightedLoc;
 };
